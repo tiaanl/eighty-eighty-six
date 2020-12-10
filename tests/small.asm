@@ -20,7 +20,7 @@
 ;add bl, cl
 ;add cl, bl
 ;add dl, al
-;
+
 ;add [di], al
 ;add [di-48], al
 ;add [di-257], al
@@ -50,8 +50,11 @@
 ;add dx, ax
 ;add dx, [0xFCBC]
 
-;add al, 7
-;add ax, 0x1007
+add al, 1
+;add dl, 1
+;add cl, 2
+;add bl, 3
+;add bx, 0x1007
 
 ;mov al, 0xf4
 ;mov cl, 0x12
@@ -67,8 +70,8 @@
 ;mov [di], al
 ;mov [di], cl
 
-mov [di], ax
-mov [di], cx
+;mov [di], ax
+;mov [di], cx
 
-mov ax, [di]
-mov cx, [di]
+;mov ax, [di]
+;mov cx, [di]

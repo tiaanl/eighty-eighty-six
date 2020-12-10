@@ -2,20 +2,14 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
+
+#include "decoder.h"
+#include "disassembler.h"
 
 #define MNEMONIC "%-6s"
 #define HEX_8 "0x%02x"
 #define HEX_16 "0x%04x"
-
-struct mod_rm mod_rm(u8 b) {
-  struct mod_rm result;
-
-  result.mod = (b & 0b11000000) >> 6;
-  result.reg = (b & 0b00111000) >> 3;
-  result.rm = (b & 0b00000111) >> 0;
-
-  return result;
-}
 
 void cpu_init(struct cpu *cpu, const u8 *code, unsigned int code_len) {
   cpu->registers.ax = 0;
@@ -39,7 +33,7 @@ void cpu_init(struct cpu *cpu, const u8 *code, unsigned int code_len) {
   cpu->code_len = code_len;
 }
 
-void print_mod_rm_reg(enum mod_rm_reg reg, int is_16_bit) {
+void print_mod_rm_reg(enum register_encoding reg, int is_16_bit) {
   // printf("(%d) ", reg);
 
   switch (reg) {
@@ -80,35 +74,6 @@ void print_mod_rm_reg(enum mod_rm_reg reg, int is_16_bit) {
   }
 }
 
-void print_mod_rm(u8 b, int is_16_bit) {
-  // printf("0x%02x: ", b);
-
-  struct mod_rm m = mod_rm(b);
-
-  switch ((enum mod_rm_mod)m.mod) {
-    case MOD_INDIRECT:
-      printf("indirect\n");
-      print_mod_rm_reg(m.reg, is_16_bit);
-      break;
-
-    case MOD_BYTE:
-      printf("byte\n");
-      break;
-
-    case MOD_DOUBLE_WORD:
-      printf("double word\n");
-      break;
-
-    case MOD_REGISTER:
-      // printf("register: ");
-      print_mod_rm_reg(m.rm, is_16_bit);
-      printf(", ");
-      print_mod_rm_reg(m.reg, is_16_bit);
-      printf("\n");
-      break;
-  }
-}
-
 void cpu_run(struct cpu *cpu) {
   while (1) {
     u16 ip = cpu->registers.ip;
@@ -117,7 +82,7 @@ void cpu_run(struct cpu *cpu) {
       return;
     }
 
-    u8 op_code = cpu->code[ip];
+    u8 op_code = cpu_peek_u8(cpu, 0);
 
     struct op_code_mapping *mapping = &op_code_table[op_code];
     if (mapping->instruction_type == NOP) {
@@ -125,8 +90,12 @@ void cpu_run(struct cpu *cpu) {
       return;
     }
 
-    if (mapping->instruction_func != 0) {
-      mapping->instruction_func(cpu);
+    if (mapping->decoder_func != 0) {
+      struct instruction instruction;
+      memset(&instruction, 0, sizeof(struct instruction));
+      int instruction_size = mapping->decoder_func(cpu, &instruction);
+      disassemble(&instruction);
+      cpu->registers.ip += instruction_size;
     } else {
       printf("No instruction handler.\n");
       return;
@@ -134,53 +103,37 @@ void cpu_run(struct cpu *cpu) {
   }
 }
 
-const char *mod_rm_mod_to_string(enum mod_rm_mod x) {
-  switch (x) {
-    case MOD_INDIRECT:
-      return "indirect";
-    case MOD_BYTE:
-      return "byte";
-    case MOD_DOUBLE_WORD:
-      return "word";
-    case MOD_REGISTER:
-      return "register";
-
-    default:
-      assert(0);
-  }
-}
-
-const char *mod_rm_reg_to_string(enum mod_rm_reg x, enum operand_size size) {
+const char *mod_rm_reg_to_string(enum register_encoding encoding, enum operand_size size) {
   static const char *reg_values[2][8] = {{"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"},
                                          {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"}};
 
-  return reg_values[size][x];
+  return reg_values[size][encoding];
 }
 
-const char *mod_rm_indirect_rm_to_string(enum mod_rm_rm x) {
+const char *mod_rm_indirect_rm_to_string(enum indirect_register_encoding x) {
   switch (x) {
-    case MOD_RM_RM_BX_SI:
+    case INDIRECT_REG_BX_SI:
       return "bx:si";
 
-    case MOD_RM_RM_BX_DI:
+    case INDIRECT_REG_BX_DI:
       return "bx:di";
 
-    case MOD_RM_RM_BP_SI:
+    case INDIRECT_REG_BP_SI:
       return "bp:si";
 
-    case MOD_RM_RM_BP_DI:
+    case INDIRECT_REG_BP_DI:
       return "bp:di";
 
-    case MOD_RM_RM_SI:
+    case INDIRECT_REG_SI:
       return "si";
 
-    case MOD_RM_RM_DI:
+    case INDIRECT_REG_DI:
       return "di";
 
-    case MOD_RM_RM_BP:
+    case INDIRECT_REG_BP:
       return "bp";
 
-    case MOD_RM_RM_BX:
+    case INDIRECT_REG_BX:
       return "bx";
   }
 
@@ -201,11 +154,8 @@ u16 cpu_peek_u16(struct cpu *cpu, int offset) {
 }
 
 i16 cpu_peek_i16(struct cpu *cpu, int offset) {
-  return (i16)(cpu->code[cpu->registers.ip + offset] + (cpu->code[cpu->registers.ip + offset + 1] << 8));
-}
-
-void cpu_advance_ip(struct cpu *cpu, u16 count) {
-  cpu->registers.ip += count;
+  return (i16)(cpu->code[cpu->registers.ip + offset] +
+               (cpu->code[cpu->registers.ip + offset + 1] << 8));
 }
 
 u8 cpu_fetch_u8(struct cpu *cpu) {
@@ -232,7 +182,13 @@ i16 cpu_fetch_i16(struct cpu *cpu) {
   return value;
 }
 
+u16 cpu_advance_ip(struct cpu *cpu, u16 count) {
+  cpu->registers.ip += count;
+  return cpu->registers.ip;
+}
+
 void cpu_instruction_add_mem_reg(struct cpu *cpu, enum operand_size operand_size) {
+#if 0
   struct mod_rm m = mod_rm(cpu->code[cpu->registers.ip + 1]);
 
   printf("%-6s", "add");
@@ -275,9 +231,11 @@ void cpu_instruction_add_mem_reg(struct cpu *cpu, enum operand_size operand_size
   }
 
   printf(", %s\n", mod_rm_reg_to_string(m.reg, operand_size));
+#endif
 }
 
 void cpu_instruction_add_reg_mem(struct cpu *cpu, enum operand_size operand_size) {
+#if 0
   struct mod_rm m = mod_rm(cpu->code[cpu->registers.ip + 1]);
 
   printf("%-6s%s, ", "add", mod_rm_reg_to_string(m.reg, operand_size));
@@ -320,6 +278,16 @@ void cpu_instruction_add_reg_mem(struct cpu *cpu, enum operand_size operand_size
   }
 
   printf("\n");
+#endif
+}
+
+unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size) {
+  unsigned i = 0;
+  for (; i < size && cpu->registers.ip + i < cpu->code_len; ++i) {
+    buffer[i] = cpu_peek_u8(cpu, i);
+  }
+
+  return i;
 }
 
 void cpu_instruction_add_mem8_reg8(struct cpu *cpu) {
@@ -352,6 +320,7 @@ void cpu_instruction_add_ax_imm16(struct cpu *cpu) {
 }
 
 void cpu_instruction_mov_memx_regx(struct cpu *cpu) {
+#if 0
   u8 op_code = cpu_fetch_u8(cpu);
   struct mod_rm m = mod_rm(cpu_fetch_u8(cpu));
 
@@ -393,6 +362,7 @@ void cpu_instruction_mov_memx_regx(struct cpu *cpu) {
   }
 
   printf(", %s\n", mod_rm_reg_to_string(m.reg, is_16_bit ? OPERAND_SIZE_16 : OPERAND_SIZE_8));
+#endif // 0
 }
 
 void cpu_instruction_mov_regx_immx(struct cpu *cpu) {

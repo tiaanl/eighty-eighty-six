@@ -17,15 +17,45 @@ enum operand_mode {
 
   // Special when MOD == INDIRECT and R/M == 0b101.
   OPERAND_MODE_DIRECT = 0b100,
+
+  // When an immediate value was passed.
+  OPERAND_MODE_IMMEDIATE = 0b101,
+};
+
+enum indirect_register_encoding {
+  INDIRECT_REG_BX_SI,
+  INDIRECT_REG_BX_DI,
+  INDIRECT_REG_BP_SI,
+  INDIRECT_REG_BP_DI,
+  INDIRECT_REG_SI,
+  INDIRECT_REG_DI,
+  INDIRECT_REG_BP,
+  INDIRECT_REG_BX,
+};
+
+enum register_encoding {
+  REG_AL_AX = 0b000,
+  REG_CL_CX = 0b001,
+  REG_DL_DX = 0b010,
+  REG_BL_BX = 0b011,
+  REG_AH_SP = 0b100,
+  REG_CH_BP = 0b101,
+  REG_DH_SI = 0b110,
+  REG_BH_DI = 0b111,
 };
 
 struct operand {
   enum operand_mode mode;
+  enum operand_size size;
   union {
-    u8 disp8;
-    u16 disp16;
-    u8 reg;
-    u16 addr;
+    enum indirect_register_encoding indirect_reg;
+    enum register_encoding reg;
+  };
+  union {
+    i8 disp8;
+    i16 disp16;
+    u8 immediate8;
+    u16 immediate16;
   };
 };
 

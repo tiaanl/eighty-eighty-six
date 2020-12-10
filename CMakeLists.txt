@@ -14,6 +14,8 @@ set(SOURCE_FILES
     src/cpu.h
     src/decoder.c
     src/decoder.h
+    src/disassembler.c
+    src/disassembler.h
     src/instruction.h
     src/instructions.c
     src/instructions.h
