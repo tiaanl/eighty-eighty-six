@@ -1,8 +1,8 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "platform.h"
 #include "instruction.h"
+#include "platform.h"
 
 struct bus;
 
@@ -30,9 +30,21 @@ struct registers {
   };
 };
 
+enum flags {
+  FLAG_CF = 0x0001, // Carry
+  FLAG_PF = 0x0004, // Parity
+  FLAG_AF = 0x0010, // Adjust
+  FLAG_ZF = 0x0040, // Zero
+  FLAG_SF = 0x0080, // Sign
+  FLAG_TF = 0x0100, // Trap
+  FLAG_IF = 0x0200, // Interrupt enable
+  FLAG_DF = 0x0400, // Direction
+  FLAG_OF = 0x0800, // Overflow
+};
+
 struct cpu {
   struct registers registers;
-  struct bus* bus;
+  struct bus *bus;
 };
 
 void cpu_init(struct cpu *cpu, struct bus *bus);
@@ -48,6 +60,9 @@ u16 cpu_advance_ip(struct cpu *cpu, u16 count);
 
 // Try to fetch the requested amount of bytes from the CPU and return the actual amount
 // fetched.
-unsigned cpu_prefetch(struct cpu* cpu, u8* buffer, unsigned size);
+unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size);
+
+u8 cpu_flag_is_set(struct cpu *cpu, enum flags flag);
+void cpu_set_flag(struct cpu *cpu, enum flags flag, u8 value);
 
 #endif // CPU_H_

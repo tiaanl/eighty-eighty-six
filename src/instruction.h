@@ -65,7 +65,7 @@ enum instruction_type {
   ADD,
   HLT,
   INC,
-  JE,
+  JZ,
   LOOP,
   MOV,
   NOP,

@@ -9,4 +9,7 @@
 #define i16 short
 #define i32 int
 
+#define HEX_8 "0x%02x"
+#define HEX_16 "0x%04x"
+
 #endif // PLATFORM_H_

@@ -220,7 +220,7 @@ void test_74(void) {
 
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == JE);
+  assert(i.type == JZ);
   assert_operand_jump_displacement(&i.destination, OPERAND_SIZE_8, 0xfe);
   assert_operand_none(&i.source);
 }

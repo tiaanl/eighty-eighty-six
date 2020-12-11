@@ -36,7 +36,7 @@ void print_mnemonic(const struct instruction *instruction) {
       printf(MNEMONIC, "inc");
       break;
 
-    case JE:
+    case JZ:
       printf(MNEMONIC, "je");
       break;
 
