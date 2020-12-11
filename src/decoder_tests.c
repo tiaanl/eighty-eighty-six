@@ -26,6 +26,10 @@ void assert_operand_immediate(struct operand *operand, enum operand_size operand
   assert(operand->immediate16 == immediate);
 }
 
+void assert_operand_none(struct operand *operand) {
+  assert(operand->mode == OPERAND_MODE_NONE);
+}
+
 void test_00(void) {
   // add [di], bl
   const u8 buffer[] = {0x00, 0x1d};
@@ -90,6 +94,94 @@ void test_05(void) {
   assert(i.type == ADD);
   assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_BL_BX);
   assert_operand_indirect(&i.source, OPERAND_SIZE_16, INDIRECT_REG_DI);
+}
+
+void test_40(void) {
+  // inc ax
+  const u8 buffer[] = {0x40};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_AL_AX);
+  assert_operand_none(&i.source);
+}
+
+void test_41(void) {
+  // inc cx
+  const u8 buffer[] = {0x41};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_CL_CX);
+  assert_operand_none(&i.source);
+}
+
+void test_42(void) {
+  // inc dx
+  const u8 buffer[] = {0x42};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_DL_DX);
+  assert_operand_none(&i.source);
+}
+
+void test_43(void) {
+  // inc bx
+  const u8 buffer[] = {0x43};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_BL_BX);
+  assert_operand_none(&i.source);
+}
+
+void test_44(void) {
+  // inc sp
+  const u8 buffer[] = {0x44};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_AH_SP);
+  assert_operand_none(&i.source);
+}
+
+void test_45(void) {
+  // inc bp
+  const u8 buffer[] = {0x45};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_CH_BP);
+  assert_operand_none(&i.source);
+}
+
+void test_46(void) {
+  // inc si
+  const u8 buffer[] = {0x46};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_DH_SI);
+  assert_operand_none(&i.source);
+}
+
+void test_47(void) {
+  // inc di
+  const u8 buffer[] = {0x47};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == INC);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_BH_DI);
+  assert_operand_none(&i.source);
 }
 
 void test_80(void) {
@@ -409,14 +501,14 @@ NOP_TEST(3d)
 NOP_TEST(3e)
 NOP_TEST(3f)
 
-NOP_TEST(40)
-NOP_TEST(41)
-NOP_TEST(42)
-NOP_TEST(43)
-NOP_TEST(44)
-NOP_TEST(45)
-NOP_TEST(46)
-NOP_TEST(47)
+//NOP_TEST(40)
+//NOP_TEST(41)
+//NOP_TEST(42)
+//NOP_TEST(43)
+//NOP_TEST(44)
+//NOP_TEST(45)
+//NOP_TEST(46)
+//NOP_TEST(47)
 NOP_TEST(48)
 NOP_TEST(49)
 NOP_TEST(4a)

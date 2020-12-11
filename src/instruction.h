@@ -20,6 +20,8 @@ enum operand_mode {
 
   // When an immediate value was passed.
   OPERAND_MODE_IMMEDIATE = 0b101,
+
+  OPERAND_MODE_NONE = 0xff,
 };
 
 enum indirect_register_encoding {

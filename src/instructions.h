@@ -6,6 +6,7 @@
 struct cpu;
 
 enum operand_type {
+  OPERAND_NONE,
   REG_AL,
   REG_AX,
   MEM_8,

@@ -107,7 +107,9 @@ void disassemble(const struct instruction *instruction) {
 
   print_operand(&instruction->destination);
 
-  printf(", ");
+  if (instruction->source.mode != OPERAND_MODE_NONE) {
+    printf(", ");
+  }
 
   print_operand(&instruction->source);
 

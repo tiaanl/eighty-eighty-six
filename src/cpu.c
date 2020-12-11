@@ -90,9 +90,12 @@ void cpu_run(struct cpu *cpu) {
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
 
     if (instruction_size < 0) {
+      printf("Could not decode instruction 0x%02x\n", buffer[0]);
       // Could not decode the instruction.
       break;
     }
+
+    cpu->registers.ip += instruction_size;
 
     disassemble(&instruction);
   }

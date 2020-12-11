@@ -6,7 +6,7 @@
 ;    mov al, 0x00
 ;loop:
 ;    mov bl, BYTE [si]
-;    test bl, 0x01
+    test bl, 0x01
 ;    je loop
 ;    add al, bl
 ;    inc si
@@ -56,14 +56,14 @@
 ;add bl, 3
 ;add bx, 0x1007
 
-mov al, 0xb0
-mov cl, 0xb1
-mov dl, 0xb2
-mov bl, 0xb3
-mov ah, 0xb4
-mov ch, 0xb5
-mov dh, 0xb6
-mov bh, 0xb7
+;mov al, 0xb0
+;mov cl, 0xb1
+;mov dl, 0xb2
+;mov bl, 0xb3
+;mov ah, 0xb4
+;mov ch, 0xb5
+;mov dh, 0xb6
+;mov bh, 0xb7
 ;mov ax, 0x01f4
 ;mov bx, 0x01f4
 ;mov cx, 0x01f4

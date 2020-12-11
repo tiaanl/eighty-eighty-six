@@ -82,6 +82,10 @@ static int decode_instruction_no_mod_rm(const u8 *buffer, unsigned buffer_size,
   }
 
   switch (mapping->source_operand_type) {
+    case OPERAND_NONE:
+      instruction->source.mode = OPERAND_MODE_NONE;
+      break;
+
     case IMM_8:
       instruction->source.mode = OPERAND_MODE_IMMEDIATE;
       instruction->source.size = OPERAND_SIZE_8;
@@ -233,6 +237,7 @@ struct op_code_mapping op_code_table[] = {
     /* 0d */ {NOP},
     /* 0e */ {NOP},
     /* 0f */ {NOP},
+
     /* 10 */ {NOP},
     /* 11 */ {NOP},
     /* 12 */ {NOP},
@@ -249,6 +254,7 @@ struct op_code_mapping op_code_table[] = {
     /* 1d */ {NOP},
     /* 1e */ {NOP},
     /* 1f */ {NOP},
+
     /* 20 */ {NOP},
     /* 21 */ {NOP},
     /* 22 */ {NOP},
@@ -265,6 +271,7 @@ struct op_code_mapping op_code_table[] = {
     /* 2d */ {NOP},
     /* 2e */ {NOP},
     /* 2f */ {NOP},
+
     /* 30 */ {NOP},
     /* 31 */ {NOP},
     /* 32 */ {NOP},
@@ -281,14 +288,15 @@ struct op_code_mapping op_code_table[] = {
     /* 3d */ {NOP},
     /* 3e */ {NOP},
     /* 3f */ {NOP},
-    /* 40 */ {NOP},
-    /* 41 */ {NOP},
-    /* 42 */ {NOP},
-    /* 43 */ {NOP},
-    /* 44 */ {NOP},
-    /* 45 */ {NOP},
-    /* 46 */ {NOP},
-    /* 47 */ {NOP},
+
+    /* 40 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 41 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 42 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 43 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 44 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 45 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 46 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 47 */ {INC, REG_16, OPERAND_NONE, decode_instruction_no_mod_rm},
     /* 48 */ {NOP},
     /* 49 */ {NOP},
     /* 4a */ {NOP},
@@ -297,6 +305,7 @@ struct op_code_mapping op_code_table[] = {
     /* 4d */ {NOP},
     /* 4e */ {NOP},
     /* 4f */ {NOP},
+
     /* 50 */ {NOP},
     /* 51 */ {NOP},
     /* 52 */ {NOP},
@@ -313,6 +322,7 @@ struct op_code_mapping op_code_table[] = {
     /* 5d */ {NOP},
     /* 5e */ {NOP},
     /* 5f */ {NOP},
+
     /* 60 */ {NOP},
     /* 61 */ {NOP},
     /* 62 */ {NOP},
@@ -329,6 +339,7 @@ struct op_code_mapping op_code_table[] = {
     /* 6d */ {NOP},
     /* 6e */ {NOP},
     /* 6f */ {NOP},
+
     /* 70 */ {NOP},
     /* 71 */ {NOP},
     /* 72 */ {NOP},
@@ -345,6 +356,7 @@ struct op_code_mapping op_code_table[] = {
     /* 7d */ {NOP},
     /* 7e */ {NOP},
     /* 7f */ {NOP},
+
     /* 80 */ {ADD, MEM_8,  IMM_8,  decode_instruction_with_mod_rm},
     /* 81 */ {ADD, MEM_16, IMM_16, decode_instruction_with_mod_rm},
     /* 82 */ {NOP},
@@ -361,6 +373,7 @@ struct op_code_mapping op_code_table[] = {
     /* 8d */ {NOP},
     /* 8e */ {NOP},
     /* 8f */ {NOP},
+
     /* 90 */ {NOP},
     /* 91 */ {NOP},
     /* 92 */ {NOP},
@@ -377,6 +390,7 @@ struct op_code_mapping op_code_table[] = {
     /* 9d */ {NOP},
     /* 9e */ {NOP},
     /* 9f */ {NOP},
+
     /* a0 */ {NOP},
     /* a1 */ {NOP},
     /* a2 */ {NOP},
@@ -393,6 +407,7 @@ struct op_code_mapping op_code_table[] = {
     /* ad */ {NOP},
     /* ae */ {NOP},
     /* af */ {NOP},
+
     /* b0 */ {MOV, REG_8,  IMM_8,  decode_instruction_no_mod_rm},
     /* b1 */ {MOV, REG_8,  IMM_8,  decode_instruction_no_mod_rm},
     /* b2 */ {MOV, REG_8,  IMM_8,  decode_instruction_no_mod_rm},
@@ -409,6 +424,7 @@ struct op_code_mapping op_code_table[] = {
     /* bd */ {MOV, REG_16, IMM_16, decode_instruction_no_mod_rm},
     /* be */ {MOV, REG_16, IMM_16, decode_instruction_no_mod_rm},
     /* bf */ {MOV, REG_16, IMM_16, decode_instruction_no_mod_rm},
+
     /* c0 */ {NOP},
     /* c1 */ {NOP},
     /* c2 */ {NOP},
@@ -425,6 +441,7 @@ struct op_code_mapping op_code_table[] = {
     /* cd */ {NOP},
     /* ce */ {NOP},
     /* cf */ {NOP},
+
     /* d0 */ {NOP},
     /* d1 */ {NOP},
     /* d2 */ {NOP},
@@ -441,6 +458,7 @@ struct op_code_mapping op_code_table[] = {
     /* dd */ {NOP},
     /* de */ {NOP},
     /* df */ {NOP},
+
     /* e0 */ {NOP},
     /* e1 */ {NOP},
     /* e2 */ {NOP},
@@ -457,6 +475,7 @@ struct op_code_mapping op_code_table[] = {
     /* ed */ {NOP},
     /* ee */ {NOP},
     /* ef */ {NOP},
+
     /* f0 */ {NOP},
     /* f1 */ {NOP},
     /* f2 */ {NOP},
