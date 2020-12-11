@@ -98,7 +98,7 @@ void print_operand(const struct operand *operand) {
       break;
 
     case OPERAND_MODE_DIRECT:
-      printf("direct");
+      printf("[" HEX_16 "]", operand->disp16);
       break;
 
     case OPERAND_MODE_IMMEDIATE:
@@ -120,3 +120,9 @@ void disassemble(const struct instruction *instruction) {
 
   printf("\n");
 }
+
+void disassemble_addr(const struct instruction *instruction, u16 addr) {
+  printf(HEX_16 "  ", addr);
+  disassemble(instruction);
+}
+

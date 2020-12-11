@@ -17,8 +17,6 @@ set(SOURCE_FILES
     src/disassembler.c
     src/disassembler.h
     src/instruction.h
-    src/instructions.c
-    src/instructions.h
     src/platform.h
     src/registers.c
     src/registers.h

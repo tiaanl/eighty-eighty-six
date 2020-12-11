@@ -1,7 +1,6 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "instructions.h"
 #include "platform.h"
 #include "instruction.h"
 
@@ -49,16 +48,5 @@ u16 cpu_advance_ip(struct cpu *cpu, u16 count);
 // Try to fetch the requested amount of bytes from the CPU and return the actual amount
 // fetched.
 unsigned cpu_prefetch(struct cpu* cpu, u8* buffer, unsigned size);
-
-void cpu_instruction_add_mem8_reg8(struct cpu *cpu);
-void cpu_instruction_add_mem16_reg16(struct cpu *cpu);
-void cpu_instruction_add_reg8_mem8(struct cpu *cpu);
-void cpu_instruction_add_reg16_mem16(struct cpu *cpu);
-void cpu_instruction_add_al_imm8(struct cpu *cpu);
-void cpu_instruction_add_ax_imm16(struct cpu *cpu);
-
-void cpu_instruction_mov_memx_regx(struct cpu *cpu);
-
-void cpu_instruction_mov_regx_immx(struct cpu *cpu);
 
 #endif // CPU_H_
