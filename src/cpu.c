@@ -61,7 +61,7 @@ static u8 get_operand_indirect_value_8(struct operand *operand, struct cpu *cpu)
   return bus_fetch(cpu->bus, address);
 }
 
-static u16 get_operand_register_value_8(struct operand *operand, struct cpu *cpu) {
+static u8 get_operand_register_value_8(struct operand *operand, struct cpu *cpu) {
   switch (operand->reg) {
     case REG_AL_AX:
       return REG_LO(cpu->registers.ax);
@@ -90,6 +90,8 @@ static u16 get_operand_register_value_8(struct operand *operand, struct cpu *cpu
     default:
       assert(0);
   }
+
+  return 0;
 }
 
 static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cpu) {
@@ -121,6 +123,8 @@ static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cp
     default:
       assert(0);
   }
+
+  return 0;
 }
 
 static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
@@ -149,6 +153,8 @@ static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
     default:
       assert(0);
   }
+
+  return 0;
 }
 
 static u16 get_operand_value_16(struct operand *operand, struct cpu *cpu) {
@@ -178,6 +184,8 @@ static u16 get_operand_value_16(struct operand *operand, struct cpu *cpu) {
     default:
       assert(0);
   }
+
+  return 0;
 }
 
 static void set_operand_indirect_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
