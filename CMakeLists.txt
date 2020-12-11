@@ -5,11 +5,12 @@ add_custom_target(assemble
     WORKING_DIRECTORY
         ${PROJECT_SOURCE_DIR}/tests
     COMMAND
-        /usr/bin/nasm -f bin small.asm && xxd -i small > ${PROJECT_BINARY_DIR}/small.c
+        nasm -f bin small.asm && xxd -i small > ${PROJECT_BINARY_DIR}/small.c
     )
 
 set(SOURCE_FILES
     ${PROJECT_BINARY_DIR}/small.c
+    src/address.h
     src/bus.h
     src/bus.c
     src/cpu.c

@@ -30,23 +30,17 @@ void assert_operand_none(struct operand *operand) {
   assert(operand->mode == OPERAND_MODE_NONE);
 }
 
-void assert_operand_jump_displacement(struct operand *operand, enum operand_size operand_size,
-                                      i16 displacement) {
-  switch (operand_size) {
-    case OPERAND_SIZE_8:
-      assert(operand->mode == OPERAND_MODE_DISPLACEMENT_8);
-      break;
-
-    case OPERAND_SIZE_16:
-      assert(operand->mode == OPERAND_MODE_DISPLACEMENT_16);
-      break;
-
-    default:
-      assert(0);
+#define ASSERT_OPERAND_JUMP_DISPLACEMENT(SIZE)                                                     \
+  void assert_operand_jump_displacement_##SIZE(struct operand *operand, i##SIZE displacement) {    \
+    assert(operand->mode == OPERAND_MODE_DISPLACEMENT_##SIZE);                                     \
+    assert(operand->size == OPERAND_SIZE_##SIZE);                                                  \
+    assert(operand->disp##SIZE == displacement);                                                   \
   }
-  assert(operand->size == operand_size);
-  assert(operand->disp16 == displacement);
-}
+
+ASSERT_OPERAND_JUMP_DISPLACEMENT(8)
+ASSERT_OPERAND_JUMP_DISPLACEMENT(16)
+
+#undef ASSERT_OPERAND_JUMP_DISPLACEMENT
 
 void test_00(void) {
   // add [di], bl
@@ -221,7 +215,7 @@ void test_74(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == JZ);
-  assert_operand_jump_displacement(&i.destination, OPERAND_SIZE_8, 0xfe);
+  assert_operand_jump_displacement_8(&i.destination, -2);
   assert_operand_none(&i.source);
 }
 
@@ -454,6 +448,17 @@ void test_bf(void) {
   assert(i.type == MOV);
   assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_BH_DI);
   assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbfbf);
+}
+
+void test_e2(void) {
+  // loop -2
+  const u8 buffer[] = {0xe2, 0xfc};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
+  assert(i.type == LOOP);
+  assert_operand_jump_displacement_8(&i.destination, -4);
+  assert_operand_none(&i.source);
 }
 
 void test_f6(void) {
@@ -736,7 +741,7 @@ NOP_TEST(df)
 
 NOP_TEST(e0)
 NOP_TEST(e1)
-NOP_TEST(e2)
+// NOP_TEST(e2)
 NOP_TEST(e3)
 NOP_TEST(e4)
 NOP_TEST(e5)

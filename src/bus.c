@@ -26,9 +26,10 @@ void bus_add_mapping(struct bus *bus, u16 begin, u16 end, void *obj, bus_fetch_f
   bus->first_mapping = node;
 }
 
-static struct bus_mapping_node *get_node(struct bus *bus, u16 addr) {
+static struct bus_mapping_node *get_node(struct bus *bus, struct address address) {
+  u32 flat = flat_address(address);
   for (struct bus_mapping_node *current = bus->first_mapping; current; current = current->next) {
-    if (addr >= current->begin && addr < current->end) {
+    if (flat >= current->begin && flat < current->end) {
       return current;
     }
   }
@@ -36,22 +37,22 @@ static struct bus_mapping_node *get_node(struct bus *bus, u16 addr) {
   return 0;
 }
 
-u8 bus_fetch(struct bus *bus, u16 addr) {
-  struct bus_mapping_node *node = get_node(bus, addr);
+u8 bus_fetch(struct bus *bus, struct address address) {
+  struct bus_mapping_node *node = get_node(bus, address);
   if (!node) {
     assert(0);
     return 0;
   }
 
-  return node->fetch(node->obj, addr);
+  return node->fetch(node->obj, address);
 }
 
-void bus_store(struct bus *bus, u16 addr, u8 value) {
-  struct bus_mapping_node *node = get_node(bus, addr);
+void bus_store(struct bus *bus, struct address address, u8 value) {
+  struct bus_mapping_node *node = get_node(bus, address);
   if (!node) {
     assert(0);
     return;
   }
 
-  node->store(node->obj, addr, value);
+  node->store(node->obj, address, value);
 }

@@ -500,7 +500,7 @@ struct op_code_mapping op_code_table[] = {
 
     /* e0 */ {NOP},
     /* e1 */ {NOP},
-    /* e2 */ {NOP},
+    /* e2 */ {LOOP, JMP_8, OPERAND_NONE, decode_instruction_no_mod_rm},
     /* e3 */ {NOP},
     /* e4 */ {NOP},
     /* e5 */ {NOP},

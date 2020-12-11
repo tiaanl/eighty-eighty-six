@@ -1,14 +1,15 @@
 #ifndef BUS_H_
 #define BUS_H_
 
+#include "address.h"
 #include "platform.h"
 
-typedef u8 (*bus_fetch_func)(void *, u16 addr);
-typedef void (*bus_store_func)(void *, u16 addr, u8);
+typedef u8 (*bus_fetch_func)(void *, struct address);
+typedef void (*bus_store_func)(void *, struct address, u8);
 
 struct bus_mapping_node {
-  u16 begin;
-  u16 end;
+  u32 begin;
+  u32 end;
 
   void *obj;
   bus_fetch_func fetch;
@@ -27,7 +28,7 @@ void bus_destroy(struct bus *bus);
 void bus_add_mapping(struct bus *bus, u16 begin, u16 end, void *obj, bus_fetch_func fetch_func,
                      bus_store_func store_func);
 
-u8 bus_fetch(struct bus *bus, u16 addr);
-void bus_store(struct bus *bus, u16 addr, u8 value);
+u8 bus_fetch(struct bus *bus, struct address address);
+void bus_store(struct bus *bus, struct address address, u8 value);
 
 #endif // BUS_H_

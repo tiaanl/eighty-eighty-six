@@ -7,16 +7,16 @@
 extern unsigned char small[];
 extern unsigned int small_len;
 
-u8 mem_fetch(void *obj, u16 addr) {
+u8 mem_fetch(void *obj, struct address address) {
   u8 *memory = obj;
 
-  return memory[addr];
+  return memory[flat_address(address)];
 }
 
-void mem_store(void *obj, u16 addr, u8 value) {
+void mem_store(void *obj, struct address address, u8 value) {
   u8 *memory = obj;
 
-  memory[addr] = value;
+  memory[flat_address(address)] = value;
 }
 
 int main(void) {
