@@ -11,7 +11,7 @@ loop:
     add al, bl
     inc si
 finish:
-;    hlt
+    hlt
 
 ;add al, bl
 ;add al, BYTE [di]

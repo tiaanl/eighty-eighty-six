@@ -35,6 +35,15 @@ static struct mod_reg_rm decode_mod_reg_rm(u8 b) {
   return result;
 }
 
+static int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *buffer,
+                                          unsigned buffer_size, struct instruction *instruction) {
+  instruction->type = mapping->instruction_type;
+  instruction->destination.mode = OPERAND_MODE_NONE;
+  instruction->source.mode = OPERAND_MODE_NONE;
+
+  return 1;
+}
+
 static int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buffer,
                                         unsigned buffer_size, struct instruction *instruction) {
   assert(buffer[0] != 0x0f);
@@ -490,7 +499,7 @@ struct op_code_mapping op_code_table[] = {
     /* f1 */ {NOP},
     /* f2 */ {NOP},
     /* f3 */ {NOP},
-    /* f4 */ {NOP},
+    /* f4 */ {HLT, OPERAND_NONE, OPERAND_NONE, decode_instruction_no_operands},
     /* f5 */ {NOP},
     /* f6 */ {TEST, MEM_8, IMM_8, decode_instruction_with_mod_rm},
     /* f7 */ {TEST, MEM_16, IMM_16, decode_instruction_with_mod_rm},

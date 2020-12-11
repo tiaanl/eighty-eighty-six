@@ -30,6 +30,24 @@ void assert_operand_none(struct operand *operand) {
   assert(operand->mode == OPERAND_MODE_NONE);
 }
 
+void assert_operand_jump_displacement(struct operand *operand, enum operand_size operand_size,
+                                      i16 displacement) {
+  switch (operand_size) {
+    case OPERAND_SIZE_8:
+      assert(operand->mode == OPERAND_MODE_DISPLACEMENT_8);
+      break;
+
+    case OPERAND_SIZE_16:
+      assert(operand->mode == OPERAND_MODE_DISPLACEMENT_16);
+      break;
+
+    default:
+      assert(0);
+  }
+  assert(operand->size == operand_size);
+  assert(operand->disp16 == displacement);
+}
+
 void test_00(void) {
   // add [di], bl
   const u8 buffer[] = {0x00, 0x1d};
@@ -193,6 +211,18 @@ void test_80(void) {
   assert(i.type == ADD);
   assert_operand_reg(&i.destination, OPERAND_SIZE_8, REG_BL_BX);
   assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x03);
+}
+
+void test_74(void) {
+  // t:
+  //   je, t
+  const u8 buffer[] = {0x74, 0xfe};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
+  assert(i.type == JE);
+  assert_operand_jump_displacement(&i.destination, OPERAND_SIZE_8, 0xfe);
+  assert_operand_none(&i.source);
 }
 
 void test_81(void) {
@@ -437,6 +467,17 @@ void test_f6(void) {
   assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x07);
 }
 
+void test_f4(void) {
+  // hlt
+  const u8 buffer[] = {0xf4};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
+  assert(i.type == HLT);
+  assert_operand_none(&i.destination);
+  assert_operand_none(&i.source);
+}
+
 void test_f7(void) {
   // test bx, 0x0707
   const u8 buffer[] = {0xf7, 0xc3, 0x07, 0x07};
@@ -523,14 +564,14 @@ NOP_TEST(3d)
 NOP_TEST(3e)
 NOP_TEST(3f)
 
-//NOP_TEST(40)
-//NOP_TEST(41)
-//NOP_TEST(42)
-//NOP_TEST(43)
-//NOP_TEST(44)
-//NOP_TEST(45)
-//NOP_TEST(46)
-//NOP_TEST(47)
+// NOP_TEST(40)
+// NOP_TEST(41)
+// NOP_TEST(42)
+// NOP_TEST(43)
+// NOP_TEST(44)
+// NOP_TEST(45)
+// NOP_TEST(46)
+// NOP_TEST(47)
 NOP_TEST(48)
 NOP_TEST(49)
 NOP_TEST(4a)
@@ -578,7 +619,7 @@ NOP_TEST(70)
 NOP_TEST(71)
 NOP_TEST(72)
 NOP_TEST(73)
-NOP_TEST(74)
+// NOP_TEST(74)
 NOP_TEST(75)
 NOP_TEST(76)
 NOP_TEST(77)
@@ -642,22 +683,22 @@ NOP_TEST(ad)
 NOP_TEST(ae)
 NOP_TEST(af)
 
-//NOP_TEST(b0)
-//NOP_TEST(b1)
-//NOP_TEST(b2)
-//NOP_TEST(b3)
-//NOP_TEST(b4)
-//NOP_TEST(b5)
-//NOP_TEST(b6)
-//NOP_TEST(b7)
-//NOP_TEST(b8)
-//NOP_TEST(b9)
-//NOP_TEST(ba)
-//NOP_TEST(bb)
-//NOP_TEST(bc)
-//NOP_TEST(bd)
-//NOP_TEST(be)
-//NOP_TEST(bf)
+// NOP_TEST(b0)
+// NOP_TEST(b1)
+// NOP_TEST(b2)
+// NOP_TEST(b3)
+// NOP_TEST(b4)
+// NOP_TEST(b5)
+// NOP_TEST(b6)
+// NOP_TEST(b7)
+// NOP_TEST(b8)
+// NOP_TEST(b9)
+// NOP_TEST(ba)
+// NOP_TEST(bb)
+// NOP_TEST(bc)
+// NOP_TEST(bd)
+// NOP_TEST(be)
+// NOP_TEST(bf)
 
 NOP_TEST(c0)
 NOP_TEST(c1)
@@ -714,10 +755,10 @@ NOP_TEST(f0)
 NOP_TEST(f1)
 NOP_TEST(f2)
 NOP_TEST(f3)
-NOP_TEST(f4)
+// NOP_TEST(f4)
 NOP_TEST(f5)
-//NOP_TEST(f6)
-//NOP_TEST(f7)
+// NOP_TEST(f6)
+// NOP_TEST(f7)
 NOP_TEST(f8)
 NOP_TEST(f9)
 NOP_TEST(fa)
