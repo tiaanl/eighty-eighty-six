@@ -4,6 +4,8 @@
 #include "platform.h"
 #include "instruction.h"
 
+struct bus;
+
 struct registers {
   union {
     u16 all[14];
@@ -30,11 +32,10 @@ struct registers {
 
 struct cpu {
   struct registers registers;
-  const u8 *code;
-  unsigned int code_len;
+  struct bus* bus;
 };
 
-void cpu_init(struct cpu *cpu, const u8 *code, unsigned int code_len);
+void cpu_init(struct cpu *cpu, struct bus *bus);
 void cpu_run(struct cpu *cpu);
 
 u8 cpu_peek_u8(struct cpu *cpu, int offset);

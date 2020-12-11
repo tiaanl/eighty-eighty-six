@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "bus.h"
 #include "decoder.h"
 #include "disassembler.h"
 
@@ -11,7 +12,7 @@
 #define HEX_8 "0x%02x"
 #define HEX_16 "0x%04x"
 
-void cpu_init(struct cpu *cpu, const u8 *code, unsigned int code_len) {
+void cpu_init(struct cpu *cpu, struct bus *bus) {
   cpu->registers.ax = 0;
   cpu->registers.bx = 0;
   cpu->registers.cx = 0;
@@ -29,8 +30,7 @@ void cpu_init(struct cpu *cpu, const u8 *code, unsigned int code_len) {
   cpu->registers.ss = 0;
   cpu->registers.es = 0;
 
-  cpu->code = code;
-  cpu->code_len = code_len;
+  cpu->bus = bus;
 }
 
 void print_mod_rm_reg(enum register_encoding reg, int is_16_bit) {
@@ -76,12 +76,6 @@ void print_mod_rm_reg(enum register_encoding reg, int is_16_bit) {
 
 void cpu_run(struct cpu *cpu) {
   while (1) {
-    u16 ip = cpu->registers.ip;
-
-    if (ip >= cpu->code_len) {
-      return;
-    }
-
     u8 buffer[16];
     memset(buffer, 0, sizeof(buffer));
     unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
@@ -147,20 +141,20 @@ const char *mod_rm_indirect_rm_to_string(enum indirect_register_encoding x) {
 }
 
 u8 cpu_peek_u8(struct cpu *cpu, int offset) {
-  return cpu->code[cpu->registers.ip + offset];
+  return bus_fetch(cpu->bus, cpu->registers.ip + offset);
 }
 
 i8 cpu_peek_i8(struct cpu *cpu, int offset) {
-  return (i8)cpu->code[cpu->registers.ip + offset];
+  return (i8)cpu_peek_u8(cpu, offset);
 }
 
 u16 cpu_peek_u16(struct cpu *cpu, int offset) {
-  return cpu->code[cpu->registers.ip + offset] + (cpu->code[cpu->registers.ip + offset + 1] << 8);
+  u16 addr = cpu->registers.ip + offset;
+  return bus_fetch(cpu->bus, addr) + (bus_fetch(cpu->bus, addr + 1) << 8);
 }
 
 i16 cpu_peek_i16(struct cpu *cpu, int offset) {
-  return (i16)(cpu->code[cpu->registers.ip + offset] +
-               (cpu->code[cpu->registers.ip + offset + 1] << 8));
+  return (i16)cpu_peek_u16(cpu, offset);
 }
 
 u8 cpu_fetch_u8(struct cpu *cpu) {
@@ -194,7 +188,7 @@ u16 cpu_advance_ip(struct cpu *cpu, u16 count) {
 
 unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size) {
   unsigned i = 0;
-  for (; i < size && cpu->registers.ip + i < cpu->code_len; ++i) {
+  for (; i < size; ++i) {
     buffer[i] = cpu_peek_u8(cpu, i);
   }
 

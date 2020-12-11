@@ -10,6 +10,8 @@ add_custom_target(assemble
 
 set(SOURCE_FILES
     ${PROJECT_BINARY_DIR}/small.c
+    src/bus.h
+    src/bus.c
     src/cpu.c
     src/cpu.h
     src/decoder.c
