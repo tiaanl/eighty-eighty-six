@@ -19,12 +19,13 @@ set(SOURCE_FILES
     src/instruction.h
     src/instructions.c
     src/instructions.h
-    src/main.c
-    src/op_code_table.c
     src/platform.h
     src/registers.c
     src/registers.h
     )
 
-add_executable(main ${SOURCE_FILES})
+add_executable(main src/main.c ${SOURCE_FILES})
 add_dependencies(main assemble)
+
+add_executable(decoder_tests src/decoder_tests.c ${SOURCE_FILES})
+add_dependencies(decoder_tests assemble)

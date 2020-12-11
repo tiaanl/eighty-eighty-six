@@ -82,24 +82,19 @@ void cpu_run(struct cpu *cpu) {
       return;
     }
 
-    u8 op_code = cpu_peek_u8(cpu, 0);
+    u8 buffer[16];
+    memset(buffer, 0, sizeof(buffer));
+    unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
 
-    struct op_code_mapping *mapping = &op_code_table[op_code];
-    if (mapping->instruction_type == NOP) {
-      printf("Found NOP instruction.\n");
-      return;
+    struct instruction instruction;
+    int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
+
+    if (instruction_size < 0) {
+      // Could not decode the instruction.
+      break;
     }
 
-    if (mapping->decoder_func != 0) {
-      struct instruction instruction;
-      memset(&instruction, 0, sizeof(struct instruction));
-      int instruction_size = mapping->decoder_func(cpu, &instruction);
-      disassemble(&instruction);
-      cpu->registers.ip += instruction_size;
-    } else {
-      printf("No instruction handler.\n");
-      return;
-    }
+    disassemble(&instruction);
   }
 }
 

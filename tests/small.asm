@@ -50,14 +50,20 @@
 ;add dx, ax
 ;add dx, [0xFCBC]
 
-add al, 1
+;add al, 1
 ;add dl, 1
 ;add cl, 2
 ;add bl, 3
 ;add bx, 0x1007
 
-;mov al, 0xf4
-;mov cl, 0x12
+mov al, 0xb0
+mov cl, 0xb1
+mov dl, 0xb2
+mov bl, 0xb3
+mov ah, 0xb4
+mov ch, 0xb5
+mov dh, 0xb6
+mov bh, 0xb7
 ;mov ax, 0x01f4
 ;mov bx, 0x01f4
 ;mov cx, 0x01f4
@@ -73,5 +79,5 @@ add al, 1
 ;mov [di], ax
 ;mov [di], cx
 
-;mov ax, [di]
+;mov bl, [di]
 ;mov cx, [di]
