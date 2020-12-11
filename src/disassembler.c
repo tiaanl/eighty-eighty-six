@@ -77,15 +77,20 @@ void print_immediate(const struct operand *operand) {
 void print_operand(const struct operand *operand) {
   switch (operand->mode) {
     case OPERAND_MODE_INDIRECT:
+      if (operand->size == OPERAND_SIZE_8) {
+        printf("BYTE ");
+      } else if (operand->size == OPERAND_SIZE_16) {
+        printf("WORD ");
+      }
       printf("[%s]", indirect_register_encoding_to_string(operand->indirect_reg));
       break;
 
     case OPERAND_MODE_DISPLACEMENT_8:
-      printf("disp8");
+      printf("%d", operand->disp8);
       break;
 
     case OPERAND_MODE_DISPLACEMENT_16:
-      printf("disp16");
+      printf("%d", operand->disp16);
       break;
 
     case OPERAND_MODE_REGISTER:

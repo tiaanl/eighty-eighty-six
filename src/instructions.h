@@ -15,13 +15,15 @@ enum operand_type {
   REG_16,
   IMM_8,
   IMM_16,
+  JMP_8,
+  JMP_16,
 };
 
 struct op_code_mapping {
   enum instruction_type instruction_type;
   enum operand_type destination_operand_type;
   enum operand_type source_operand_type;
-  int (*decoder_func)(const u8 *, unsigned, struct instruction *);
+  int (*decoder_func)(struct op_code_mapping *, const u8 *, unsigned, struct instruction *);
 };
 
 extern struct op_code_mapping op_code_table[];

@@ -1,20 +1,20 @@
-;main:
-;    mov si, 0x01f4
-;    mov cl, BYTE [si]
-;    inc si
-;    mov ch, 0x00
-;    mov al, 0x00
-;loop:
-;    mov bl, BYTE [si]
+main:
+    mov si, 0x01f4
+    mov cl, BYTE [si]
+    inc si
+    mov ch, 0x00
+    mov al, 0x00
+loop:
+    mov bl, BYTE [si]
     test bl, 0x01
-;    je loop
-;    add al, bl
-;    inc si
-;finish:
+    je loop
+    add al, bl
+    inc si
+finish:
 ;    hlt
-;
-;    add al, bl
-;    add al, BYTE [di]
+
+;add al, bl
+;add al, BYTE [di]
 
 ;add al, dl
 ;add bl, cl

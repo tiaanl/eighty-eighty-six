@@ -90,7 +90,14 @@ void cpu_run(struct cpu *cpu) {
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
 
     if (instruction_size < 0) {
-      printf("Could not decode instruction 0x%02x\n", buffer[0]);
+      printf("Could not decode instructions [");
+      for (unsigned i = 0; i < sizeof(buffer); ++i) {
+        printf("%02x", buffer[i]);
+        if (i < sizeof(buffer) - 1) {
+          printf(" ");
+        }
+      }
+      printf("]\n");
       // Could not decode the instruction.
       break;
     }

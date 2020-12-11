@@ -35,11 +35,11 @@ static struct mod_reg_rm decode_mod_reg_rm(u8 b) {
   return result;
 }
 
-static int decode_instruction_no_mod_rm(const u8 *buffer, unsigned buffer_size,
-                                        struct instruction *instruction) {
-  u8 op_code = buffer[0];
+static int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buffer,
+                                        unsigned buffer_size, struct instruction *instruction) {
+  assert(buffer[0] != 0x0f);
 
-  struct op_code_mapping *mapping = &op_code_table[op_code];
+  u8 op_code = buffer[0];
 
   // op_code
   int instruction_size = 1;
@@ -76,6 +76,20 @@ static int decode_instruction_no_mod_rm(const u8 *buffer, unsigned buffer_size,
       instruction->destination.reg = reg;
       break;
     }
+
+    case JMP_8:
+      instruction->destination.mode = OPERAND_MODE_DISPLACEMENT_8;
+      instruction->destination.size = OPERAND_SIZE_8;
+      instruction->destination.disp8 = (i8)buffer[1];
+      instruction_size += 1;
+      break;
+
+    case JMP_16:
+      instruction->destination.mode = OPERAND_MODE_DISPLACEMENT_16;
+      instruction->destination.size = OPERAND_SIZE_16;
+      instruction->destination.disp16 = (i16)(buffer[1] + (buffer[2] << 8));
+      instruction_size += 2;
+      break;
 
     default:
       assert(0);
@@ -198,12 +212,8 @@ static int decode_operand(enum operand_type type, struct mod_reg_rm mrm, const u
   }
 }
 
-static int decode_instruction_with_mod_rm(const u8 *buffer, unsigned buffer_size,
-                                          struct instruction *instruction) {
-  u8 op_code = buffer[0];
-
-  struct op_code_mapping *mapping = &op_code_table[op_code];
-
+static int decode_instruction_with_mod_rm(struct op_code_mapping *mapping, const u8 *buffer,
+                                          unsigned buffer_size, struct instruction *instruction) {
   struct mod_reg_rm mrm = decode_mod_reg_rm(buffer[1]);
 
   instruction->type = mapping->instruction_type;
@@ -344,7 +354,7 @@ struct op_code_mapping op_code_table[] = {
     /* 71 */ {NOP},
     /* 72 */ {NOP},
     /* 73 */ {NOP},
-    /* 74 */ {NOP},
+    /* 74 */ {JE, JMP_8, OPERAND_NONE, decode_instruction_no_mod_rm},
     /* 75 */ {NOP},
     /* 76 */ {NOP},
     /* 77 */ {NOP},
@@ -482,6 +492,282 @@ struct op_code_mapping op_code_table[] = {
     /* f3 */ {NOP},
     /* f4 */ {NOP},
     /* f5 */ {NOP},
+    /* f6 */ {TEST, MEM_8, IMM_8, decode_instruction_with_mod_rm},
+    /* f7 */ {TEST, MEM_16, IMM_16, decode_instruction_with_mod_rm},
+    /* f8 */ {NOP},
+    /* f9 */ {NOP},
+    /* fa */ {NOP},
+    /* fb */ {NOP},
+    /* fc */ {NOP},
+    /* fd */ {NOP},
+    /* fe */ {NOP},
+    /* ff */ {NOP},
+};
+// clang-format on
+
+// clang-format off
+struct op_code_mapping op_code_table_0f[] = {
+    /* 00 */ {NOP},
+    /* 01 */ {NOP},
+    /* 02 */ {NOP},
+    /* 03 */ {NOP},
+    /* 04 */ {NOP},
+    /* 05 */ {NOP},
+    /* 06 */ {NOP},
+    /* 07 */ {NOP},
+    /* 08 */ {NOP},
+    /* 09 */ {NOP},
+    /* 0a */ {NOP},
+    /* 0b */ {NOP},
+    /* 0c */ {NOP},
+    /* 0d */ {NOP},
+    /* 0e */ {NOP},
+    /* 0f */ {NOP},
+
+    /* 10 */ {NOP},
+    /* 11 */ {NOP},
+    /* 12 */ {NOP},
+    /* 13 */ {NOP},
+    /* 14 */ {NOP},
+    /* 15 */ {NOP},
+    /* 16 */ {NOP},
+    /* 17 */ {NOP},
+    /* 18 */ {NOP},
+    /* 19 */ {NOP},
+    /* 1a */ {NOP},
+    /* 1b */ {NOP},
+    /* 1c */ {NOP},
+    /* 1d */ {NOP},
+    /* 1e */ {NOP},
+    /* 1f */ {NOP},
+
+    /* 20 */ {NOP},
+    /* 21 */ {NOP},
+    /* 22 */ {NOP},
+    /* 23 */ {NOP},
+    /* 24 */ {NOP},
+    /* 25 */ {NOP},
+    /* 26 */ {NOP},
+    /* 27 */ {NOP},
+    /* 28 */ {NOP},
+    /* 29 */ {NOP},
+    /* 2a */ {NOP},
+    /* 2b */ {NOP},
+    /* 2c */ {NOP},
+    /* 2d */ {NOP},
+    /* 2e */ {NOP},
+    /* 2f */ {NOP},
+
+    /* 30 */ {NOP},
+    /* 31 */ {NOP},
+    /* 32 */ {NOP},
+    /* 33 */ {NOP},
+    /* 34 */ {NOP},
+    /* 35 */ {NOP},
+    /* 36 */ {NOP},
+    /* 37 */ {NOP},
+    /* 38 */ {NOP},
+    /* 39 */ {NOP},
+    /* 3a */ {NOP},
+    /* 3b */ {NOP},
+    /* 3c */ {NOP},
+    /* 3d */ {NOP},
+    /* 3e */ {NOP},
+    /* 3f */ {NOP},
+
+    /* 40 */ {NOP},
+    /* 41 */ {NOP},
+    /* 42 */ {NOP},
+    /* 43 */ {NOP},
+    /* 44 */ {NOP},
+    /* 45 */ {NOP},
+    /* 46 */ {NOP},
+    /* 47 */ {NOP},
+    /* 48 */ {NOP},
+    /* 49 */ {NOP},
+    /* 4a */ {NOP},
+    /* 4b */ {NOP},
+    /* 4c */ {NOP},
+    /* 4d */ {NOP},
+    /* 4e */ {NOP},
+    /* 4f */ {NOP},
+
+    /* 50 */ {NOP},
+    /* 51 */ {NOP},
+    /* 52 */ {NOP},
+    /* 53 */ {NOP},
+    /* 54 */ {NOP},
+    /* 55 */ {NOP},
+    /* 56 */ {NOP},
+    /* 57 */ {NOP},
+    /* 58 */ {NOP},
+    /* 59 */ {NOP},
+    /* 5a */ {NOP},
+    /* 5b */ {NOP},
+    /* 5c */ {NOP},
+    /* 5d */ {NOP},
+    /* 5e */ {NOP},
+    /* 5f */ {NOP},
+
+    /* 60 */ {NOP},
+    /* 61 */ {NOP},
+    /* 62 */ {NOP},
+    /* 63 */ {NOP},
+    /* 64 */ {NOP},
+    /* 65 */ {NOP},
+    /* 66 */ {NOP},
+    /* 67 */ {NOP},
+    /* 68 */ {NOP},
+    /* 69 */ {NOP},
+    /* 6a */ {NOP},
+    /* 6b */ {NOP},
+    /* 6c */ {NOP},
+    /* 6d */ {NOP},
+    /* 6e */ {NOP},
+    /* 6f */ {NOP},
+
+    /* 70 */ {NOP},
+    /* 71 */ {NOP},
+    /* 72 */ {NOP},
+    /* 73 */ {NOP},
+    /* 74 */ {NOP},
+    /* 75 */ {NOP},
+    /* 76 */ {NOP},
+    /* 77 */ {NOP},
+    /* 78 */ {NOP},
+    /* 79 */ {NOP},
+    /* 7a */ {NOP},
+    /* 7b */ {NOP},
+    /* 7c */ {NOP},
+    /* 7d */ {NOP},
+    /* 7e */ {NOP},
+    /* 7f */ {NOP},
+
+    /* 80 */ {NOP},
+    /* 81 */ {NOP},
+    /* 82 */ {NOP},
+    /* 83 */ {NOP},
+    /* 84 */ {JE, JMP_16, OPERAND_NONE, decode_instruction_no_mod_rm},
+    /* 85 */ {NOP},
+    /* 86 */ {NOP},
+    /* 87 */ {NOP},
+    /* 88 */ {NOP},
+    /* 89 */ {NOP},
+    /* 8a */ {NOP},
+    /* 8b */ {NOP},
+    /* 8c */ {NOP},
+    /* 8d */ {NOP},
+    /* 8e */ {NOP},
+    /* 8f */ {NOP},
+
+    /* 90 */ {NOP},
+    /* 91 */ {NOP},
+    /* 92 */ {NOP},
+    /* 93 */ {NOP},
+    /* 94 */ {NOP},
+    /* 95 */ {NOP},
+    /* 96 */ {NOP},
+    /* 97 */ {NOP},
+    /* 98 */ {NOP},
+    /* 99 */ {NOP},
+    /* 9a */ {NOP},
+    /* 9b */ {NOP},
+    /* 9c */ {NOP},
+    /* 9d */ {NOP},
+    /* 9e */ {NOP},
+    /* 9f */ {NOP},
+
+    /* a0 */ {NOP},
+    /* a1 */ {NOP},
+    /* a2 */ {NOP},
+    /* a3 */ {NOP},
+    /* a4 */ {NOP},
+    /* a5 */ {NOP},
+    /* a6 */ {NOP},
+    /* a7 */ {NOP},
+    /* a8 */ {NOP},
+    /* a9 */ {NOP},
+    /* aa */ {NOP},
+    /* ab */ {NOP},
+    /* ac */ {NOP},
+    /* ad */ {NOP},
+    /* ae */ {NOP},
+    /* af */ {NOP},
+
+    /* b0 */ {NOP},
+    /* b1 */ {NOP},
+    /* b2 */ {NOP},
+    /* b3 */ {NOP},
+    /* b4 */ {NOP},
+    /* b5 */ {NOP},
+    /* b6 */ {NOP},
+    /* b7 */ {NOP},
+    /* b8 */ {NOP},
+    /* b9 */ {NOP},
+    /* ba */ {NOP},
+    /* bb */ {NOP},
+    /* bc */ {NOP},
+    /* bd */ {NOP},
+    /* be */ {NOP},
+    /* bf */ {NOP},
+
+    /* c0 */ {NOP},
+    /* c1 */ {NOP},
+    /* c2 */ {NOP},
+    /* c3 */ {NOP},
+    /* c4 */ {NOP},
+    /* c5 */ {NOP},
+    /* c6 */ {NOP},
+    /* c7 */ {NOP},
+    /* c8 */ {NOP},
+    /* c9 */ {NOP},
+    /* ca */ {NOP},
+    /* cb */ {NOP},
+    /* cc */ {NOP},
+    /* cd */ {NOP},
+    /* ce */ {NOP},
+    /* cf */ {NOP},
+
+    /* d0 */ {NOP},
+    /* d1 */ {NOP},
+    /* d2 */ {NOP},
+    /* d3 */ {NOP},
+    /* d4 */ {NOP},
+    /* d5 */ {NOP},
+    /* d6 */ {NOP},
+    /* d7 */ {NOP},
+    /* d8 */ {NOP},
+    /* d9 */ {NOP},
+    /* da */ {NOP},
+    /* db */ {NOP},
+    /* dc */ {NOP},
+    /* dd */ {NOP},
+    /* de */ {NOP},
+    /* df */ {NOP},
+
+    /* e0 */ {NOP},
+    /* e1 */ {NOP},
+    /* e2 */ {NOP},
+    /* e3 */ {NOP},
+    /* e4 */ {NOP},
+    /* e5 */ {NOP},
+    /* e6 */ {NOP},
+    /* e7 */ {NOP},
+    /* e8 */ {NOP},
+    /* e9 */ {NOP},
+    /* ea */ {NOP},
+    /* eb */ {NOP},
+    /* ec */ {NOP},
+    /* ed */ {NOP},
+    /* ee */ {NOP},
+    /* ef */ {NOP},
+
+    /* f0 */ {NOP},
+    /* f1 */ {NOP},
+    /* f2 */ {NOP},
+    /* f3 */ {NOP},
+    /* f4 */ {NOP},
+    /* f5 */ {NOP},
     /* f6 */ {NOP},
     /* f7 */ {NOP},
     /* f8 */ {NOP},
@@ -498,16 +784,27 @@ struct op_code_mapping op_code_table[] = {
 int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instruction *instruction) {
   assert(buffer_size > 0);
 
-  u8 op_code = buffer[0];
+  int instruction_size = 0;
 
-  struct op_code_mapping *mapping = &op_code_table[op_code];
+  u8 op_code = buffer[0];
+  struct op_code_mapping *mapping;
+  if (op_code != 0x0f) {
+    mapping = &op_code_table[op_code];
+  } else {
+    instruction_size += 1;
+    buffer += 1;
+    op_code = buffer[0];
+    mapping = &op_code_table_0f[op_code];
+  }
+
   if (mapping->instruction_type == NOP) {
     return -1;
   }
 
   if (mapping->decoder_func != 0) {
     memset(instruction, 0, sizeof(struct instruction));
-    return mapping->decoder_func(buffer, buffer_size, instruction);
+    instruction_size += mapping->decoder_func(mapping, buffer, buffer_size, instruction);
+    return instruction_size;
   } else {
     return -2;
   }

@@ -426,6 +426,28 @@ void test_bf(void) {
   assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbfbf);
 }
 
+void test_f6(void) {
+  // test bl, 0x07
+  const u8 buffer[] = {0xf6, 0xc3, 0x07};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
+  assert(i.type == TEST);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_8, REG_BL_BX);
+  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x07);
+}
+
+void test_f7(void) {
+  // test bx, 0x0707
+  const u8 buffer[] = {0xf7, 0xc3, 0x07, 0x07};
+
+  struct instruction i;
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 4);
+  assert(i.type == TEST);
+  assert_operand_reg(&i.destination, OPERAND_SIZE_16, REG_BL_BX);
+  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0x0707);
+}
+
 #define NOP_TEST(OpCode)                                                                           \
   void test_##OpCode(void) {                                                                       \
     const u8 buffer[] = {0x##OpCode};                                                              \
@@ -694,8 +716,8 @@ NOP_TEST(f2)
 NOP_TEST(f3)
 NOP_TEST(f4)
 NOP_TEST(f5)
-NOP_TEST(f6)
-NOP_TEST(f7)
+//NOP_TEST(f6)
+//NOP_TEST(f7)
 NOP_TEST(f8)
 NOP_TEST(f9)
 NOP_TEST(fa)
