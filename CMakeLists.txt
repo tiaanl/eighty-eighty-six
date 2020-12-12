@@ -21,8 +21,6 @@ set(SOURCE_FILES
     src/disassembler.h
     src/instruction.h
     src/platform.h
-    src/registers.c
-    src/registers.h
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})

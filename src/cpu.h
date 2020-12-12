@@ -3,9 +3,52 @@
 
 #include "instruction.h"
 #include "platform.h"
-#include "registers.h"
 
 struct bus;
+
+enum register_8 {
+  AL,
+  CL,
+  DL,
+  BL,
+
+  AH,
+  CH,
+  DH,
+  BH,
+
+  REGISTER_8_COUNT,
+};
+
+enum register_16 {
+  AX,
+  CX,
+  DX,
+  BX,
+
+  SP,
+  BP,
+  SI,
+  DI,
+
+  IP,
+  FLAGS,
+
+  REGISTER_16_COUNT,
+};
+
+enum segment_register {
+  ES,
+  CS,
+  SS,
+  DS,
+
+  SEGMENT_REGISTER_COUNT,
+};
+
+const char *register_8_to_string(enum register_8 reg);
+const char *register_16_to_string(enum register_16 reg);
+const char *segment_register_to_string(enum segment_register reg);
 
 enum flags {
   FLAG_CF = 0x0001, // Carry
@@ -20,7 +63,7 @@ enum flags {
 };
 
 struct cpu {
-  // AX, BX, CX, DX, SI, DI, BP, SP, IP, FLAGS, CS, DS, SS, ES
+  // AX, CX, DX, BX, SP, BP, SI, DI, IP, FLAGS, ES, CS, SS, DS
   u16 registers[14];
   struct bus *bus;
 };
