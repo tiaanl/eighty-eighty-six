@@ -3,32 +3,9 @@
 
 #include "instruction.h"
 #include "platform.h"
+#include "registers.h"
 
 struct bus;
-
-struct registers {
-  union {
-    u16 all[14];
-    struct {
-      u16 ax;
-      u16 bx;
-      u16 cx;
-      u16 dx;
-
-      u16 ip;
-      u16 si;
-      u16 di;
-      u16 bp;
-      u16 sp;
-      u16 flags;
-
-      u16 cs;
-      u16 ds;
-      u16 ss;
-      u16 es;
-    };
-  };
-};
 
 enum flags {
   FLAG_CF = 0x0001, // Carry
@@ -43,7 +20,8 @@ enum flags {
 };
 
 struct cpu {
-  struct registers registers;
+  // AX, BX, CX, DX, SI, DI, BP, SP, IP, FLAGS, CS, DS, SS, ES
+  u16 registers[14];
   struct bus *bus;
 };
 
@@ -61,6 +39,12 @@ u16 cpu_advance_ip(struct cpu *cpu, u16 count);
 // Try to fetch the requested amount of bytes from the CPU and return the actual amount
 // fetched.
 unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size);
+
+u8 cpu_get_register_8(struct cpu *cpu, enum register_8 reg);
+void cpu_set_register_8(struct cpu *cpu, enum register_8 reg, u8 value);
+u16 cpu_get_register_16(struct cpu *cpu, enum register_16 reg);
+void cpu_set_register_16(struct cpu *cpu, enum register_16 reg, u16 value);
+u16 cpu_get_segment(struct cpu *cpu, enum segment_register reg);
 
 u8 cpu_flag_is_set(struct cpu *cpu, enum flags flag);
 void cpu_set_flag(struct cpu *cpu, enum flags flag, u8 value);

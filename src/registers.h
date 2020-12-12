@@ -3,47 +3,45 @@
 
 enum register_8 {
   AL,
-  AH,
-  BL,
-  BH,
   CL,
-  CH,
   DL,
+  BL,
+
+  AH,
+  CH,
   DH,
+  BH,
 
   REGISTER_8_COUNT,
 };
 
 enum register_16 {
   AX,
-  BX,
   CX,
   DX,
+  BX,
+
+  SP,
+  BP,
   SI,
   DI,
-  BP,
-  SP,
+
+  IP,
   FLAGS,
 
   REGISTER_16_COUNT,
 };
 
-enum register_32 {
-  EAX,
-  EBX,
-  ECX,
-  EDX,
-  ESI,
-  EDI,
-  EBP,
-  ESP,
-  EFLAGS,
+enum segment_register {
+  ES,
+  CS,
+  SS,
+  DS,
 
-  REGISTER_32_COUNT,
+  SEGMENT_REGISTER_COUNT,
 };
 
 const char *register_8_to_string(enum register_8 reg);
 const char *register_16_to_string(enum register_16 reg);
-const char *register_32_to_string(enum register_32 reg);
 
 #endif // REGISTERS_H_

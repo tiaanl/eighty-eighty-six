@@ -11,11 +11,11 @@
 #define REG_HI(x) ((x) >> 8)
 #define REG_LO(x) ((x)&0xff)
 
-static void print_registers(struct registers *registers) {
+static void print_registers(u16 registers[]) {
   printf("ax: " HEX_16 ", bx: " HEX_16 ", cx: " HEX_16 ", dx: " HEX_16 ", ip: " HEX_16 "\n",
-         registers->ax, registers->bx, registers->cx, registers->dx, registers->ip);
-  printf("sp: " HEX_16 ", bp: " HEX_16 ", si: " HEX_16 ", di: " HEX_16 ", fl: " HEX_16 "\n",
-         registers->sp, registers->bp, registers->si, registers->di, registers->flags);
+         registers[AX], registers[BX], registers[CX], registers[DX], registers[IP]);
+  printf("si: " HEX_16 ", di: " HEX_16 ", bp: " HEX_16 ", sp: " HEX_16 ", fl: " HEX_16 "\n",
+         registers[SI], registers[DI], registers[BP], registers[SP], registers[FLAGS]);
 }
 
 struct address get_operand_indirect_address(struct operand *operand, struct cpu *cpu) {
@@ -23,26 +23,35 @@ struct address get_operand_indirect_address(struct operand *operand, struct cpu 
 
   switch (operand->indirect_reg) {
     case INDIRECT_REG_BX_SI:
+      result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, SI));
+      break;
+
     case INDIRECT_REG_BX_DI:
+      result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, DI));
+      break;
+
     case INDIRECT_REG_BP_SI:
+      result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, SI));
+      break;
+
     case INDIRECT_REG_BP_DI:
-      assert(0);
+      result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, DI));
       break;
 
     case INDIRECT_REG_SI:
-      result = segment_offset(cpu->registers.ds, cpu->registers.si);
+      result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, SI));
       break;
 
     case INDIRECT_REG_DI:
-      result = segment_offset(cpu->registers.ds, cpu->registers.di);
+      result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, DI));
       break;
 
     case INDIRECT_REG_BP:
-      result = segment_offset(cpu->registers.ds, cpu->registers.bp);
+      result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BP));
       break;
 
     case INDIRECT_REG_BX:
-      result = segment_offset(cpu->registers.ds, cpu->registers.bx);
+      result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BX));
       break;
   }
 
@@ -64,28 +73,28 @@ static u8 get_operand_indirect_value_8(struct operand *operand, struct cpu *cpu)
 static u8 get_operand_register_value_8(struct operand *operand, struct cpu *cpu) {
   switch (operand->reg) {
     case REG_AL_AX:
-      return REG_LO(cpu->registers.ax);
+      return cpu_get_register_8(cpu, AL);
 
     case REG_CL_CX:
-      return REG_LO(cpu->registers.cx);
+      return cpu_get_register_8(cpu, CL);
 
     case REG_DL_DX:
-      return REG_LO(cpu->registers.dx);
+      return cpu_get_register_8(cpu, DL);
 
     case REG_BL_BX:
-      return REG_LO(cpu->registers.bx);
+      return cpu_get_register_8(cpu, BL);
 
     case REG_AH_SP:
-      return REG_HI(cpu->registers.ax);
+      return cpu_get_register_8(cpu, AH);
 
     case REG_CH_BP:
-      return REG_HI(cpu->registers.cx);
+      return cpu_get_register_8(cpu, CH);
 
     case REG_DH_SI:
-      return REG_HI(cpu->registers.dx);
+      return cpu_get_register_8(cpu, DH);
 
     case REG_BH_DI:
-      return REG_HI(cpu->registers.bx);
+      return cpu_get_register_8(cpu, BH);
 
     default:
       assert(0);
@@ -97,28 +106,28 @@ static u8 get_operand_register_value_8(struct operand *operand, struct cpu *cpu)
 static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cpu) {
   switch (operand->reg) {
     case REG_AL_AX:
-      return cpu->registers.ax;
+      return cpu_get_register_16(cpu, AX);
 
     case REG_CL_CX:
-      return cpu->registers.cx;
+      return cpu_get_register_16(cpu, CX);
 
     case REG_DL_DX:
-      return cpu->registers.dx;
+      return cpu_get_register_16(cpu, DX);
 
     case REG_BL_BX:
-      return cpu->registers.bx;
+      return cpu_get_register_16(cpu, BX);
 
     case REG_AH_SP:
-      return cpu->registers.sp;
+      return cpu_get_register_16(cpu, SP);
 
     case REG_CH_BP:
-      return cpu->registers.bp;
+      return cpu_get_register_16(cpu, BP);
 
     case REG_DH_SI:
-      return cpu->registers.si;
+      return cpu_get_register_16(cpu, SI);
 
     case REG_BH_DI:
-      return cpu->registers.di;
+      return cpu_get_register_16(cpu, DI);
 
     default:
       assert(0);
@@ -189,100 +198,50 @@ static u16 get_operand_value_16(struct operand *operand, struct cpu *cpu) {
 }
 
 static void set_operand_indirect_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
-  u16 addr;
+  struct address address = get_operand_indirect_address(operand, cpu);
 
-  switch (operand->indirect_reg) {
-    case INDIRECT_REG_BX_SI:
-    case INDIRECT_REG_BX_DI:
-    case INDIRECT_REG_BP_SI:
-    case INDIRECT_REG_BP_DI:
-      assert(0);
-      break;
-
-    case INDIRECT_REG_SI:
-      addr = cpu->registers.si;
-      break;
-
-    case INDIRECT_REG_DI:
-      addr = cpu->registers.di;
-      break;
-
-    case INDIRECT_REG_BP:
-      addr = cpu->registers.bp;
-      break;
-
-    case INDIRECT_REG_BX:
-      addr = cpu->registers.bx;
-      break;
-  }
-
-  bus_store(cpu->bus, segment_offset(0, addr), value);
+  bus_store(cpu->bus, address, value);
 }
 
 static void set_operand_indirect_value_16(struct operand *operand, struct cpu *cpu, u16 value) {
-  u16 addr;
+  struct address address = get_operand_indirect_address(operand, cpu);
 
-  switch (operand->indirect_reg) {
-    case INDIRECT_REG_BX_SI:
-    case INDIRECT_REG_BX_DI:
-    case INDIRECT_REG_BP_SI:
-    case INDIRECT_REG_BP_DI:
-      assert(0);
-      break;
-
-    case INDIRECT_REG_SI:
-      addr = cpu->registers.si;
-      break;
-
-    case INDIRECT_REG_DI:
-      addr = cpu->registers.di;
-      break;
-
-    case INDIRECT_REG_BP:
-      addr = cpu->registers.bp;
-      break;
-
-    case INDIRECT_REG_BX:
-      addr = cpu->registers.bx;
-      break;
-  }
-
-  bus_store(cpu->bus, segment_offset(0, addr), value >> 8);
-  bus_store(cpu->bus, segment_offset(0, addr + 1), value & 0xff);
+  bus_store(cpu->bus, address, value >> 8);
+  bus_store(cpu->bus, address_offset(address, 1), value & 0xff);
 }
 
 static void set_operand_register_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
   switch (operand->reg) {
     case REG_AL_AX:
-      cpu->registers.ax = (cpu->registers.ax & 0xff00) + value;
+      cpu_set_register_8(cpu, AL, value);
       break;
 
     case REG_CL_CX:
-      cpu->registers.cx = (cpu->registers.cx & 0xff00) + value;
+      cpu_set_register_8(cpu, CL, value);
       break;
 
     case REG_DL_DX:
-      cpu->registers.dx = (cpu->registers.dx & 0xff00) + value;
+      cpu_set_register_8(cpu, DL, value);
       break;
 
     case REG_BL_BX:
-      cpu->registers.bx = (cpu->registers.bx & 0xff00) + value;
+      cpu_set_register_8(cpu, BL, value);
       break;
 
     case REG_AH_SP:
-      cpu->registers.ax = (cpu->registers.ax & 0x00ff) + (value << 8);
+      cpu_set_register_8(cpu, AH, value);
       break;
 
     case REG_CH_BP:
-      cpu->registers.cx = (cpu->registers.cx & 0x00ff) + (value << 8);
+      cpu_set_register_8(cpu, CH, value);
       break;
 
     case REG_DH_SI:
-      cpu->registers.dx = (cpu->registers.dx & 0x00ff) + (value << 8);
+      cpu_set_register_8(cpu, DH, value);
       break;
 
     case REG_BH_DI:
-      cpu->registers.bx = (cpu->registers.bx & 0x00ff) + (value << 8);
+      cpu_set_register_8(cpu, BH, value);
       break;
   }
 }
@@ -290,35 +249,35 @@ static void set_operand_register_value_8(struct operand *operand, struct cpu *cp
 static void set_operand_register_value_16(struct operand *operand, struct cpu *cpu, u16 value) {
   switch (operand->reg) {
     case REG_AL_AX:
-      cpu->registers.ax = value;
+      cpu_set_register_16(cpu, AX, value);
       break;
 
     case REG_CL_CX:
-      cpu->registers.cx = value;
+      cpu_set_register_16(cpu, CX, value);
       break;
 
     case REG_DL_DX:
-      cpu->registers.dx = value;
+      cpu_set_register_16(cpu, DX, value);
       break;
 
     case REG_BL_BX:
-      cpu->registers.bx = value;
+      cpu_set_register_16(cpu, BX, value);
       break;
 
     case REG_AH_SP:
-      cpu->registers.sp = value;
+      cpu_set_register_16(cpu, SP, value);
       break;
 
     case REG_CH_BP:
-      cpu->registers.bp = value;
+      cpu_set_register_16(cpu, BP, value);
       break;
 
     case REG_DH_SI:
-      cpu->registers.si = value;
+      cpu_set_register_16(cpu, SI, value);
       break;
 
     case REG_BH_DI:
-      cpu->registers.di = value;
+      cpu_set_register_16(cpu, DI, value);
       break;
   }
 }
@@ -536,19 +495,21 @@ static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
 
   switch (instruction->destination.size) {
     case OPERAND_SIZE_8: {
-      u8 cl = REG_LO(cpu->registers.cx);
+      u8 cl = cpu_get_register_8(cpu, CL) - 1;
+      cpu_set_register_8(cpu, CL, cl);
       if (cl) {
-        cpu->registers.cx = (cpu->registers.cx & 0xff00) + cl - 1;
-        cpu->registers.ip += instruction->destination.disp8;
+        u16 ip = cpu_get_register_16(cpu, IP);
+        cpu_set_register_16(cpu, IP, ip + instruction->destination.disp8);
       }
       break;
     }
 
     case OPERAND_SIZE_16: {
-      u8 cx = cpu->registers.cx;
+      u8 cx = cpu_get_register_16(cpu, CX);
       if (cx) {
-        cpu->registers.cx -= 1;
-        cpu->registers.ip += instruction->destination.disp16;
+        cpu_set_register_16(cpu, CX, cx - 1);
+        u16 ip = cpu_get_register_16(cpu, IP);
+        cpu_set_register_16(cpu, IP, ip + instruction->destination.disp16);
       }
       break;
     }
@@ -562,13 +523,14 @@ static void interpret_jz(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == JZ);
 
   if (cpu_flag_is_set(cpu, FLAG_ZF)) {
+    u16 ip = cpu_get_register_16(cpu, IP);
     switch (instruction->destination.size) {
       case OPERAND_SIZE_8:
-        cpu->registers.ip += instruction->destination.disp8;
+        cpu_set_register_16(cpu, IP, ip + instruction->destination.disp8);
         break;
 
       case OPERAND_SIZE_16:
-        cpu->registers.ip += instruction->destination.disp16;
+        cpu_set_register_16(cpu, IP, ip + instruction->destination.disp16);
         break;
 
       default:
@@ -615,28 +577,12 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
 }
 
 void cpu_init(struct cpu *cpu, struct bus *bus) {
-  cpu->registers.ax = 0;
-  cpu->registers.bx = 0;
-  cpu->registers.cx = 0;
-  cpu->registers.dx = 0;
-
-  cpu->registers.ip = 0;
-  cpu->registers.si = 0;
-  cpu->registers.di = 0;
-  cpu->registers.bp = 0;
-  cpu->registers.sp = 0;
-  cpu->registers.flags = 0;
-
-  cpu->registers.cs = 0;
-  cpu->registers.ds = 0;
-  cpu->registers.ss = 0;
-  cpu->registers.es = 0;
-
+  memset(cpu->registers, 0, sizeof(cpu->registers));
   cpu->bus = bus;
 }
 
 void cpu_run(struct cpu *cpu) {
-  print_registers(&cpu->registers);
+  print_registers(cpu->registers);
 
   while (1) {
     u8 buffer[16];
@@ -658,9 +604,10 @@ void cpu_run(struct cpu *cpu) {
       break;
     }
 
-    disassemble_addr(&instruction, cpu->registers.ip);
+    u16 ip = cpu_get_register_16(cpu, IP);
+    disassemble_addr(&instruction, ip);
 
-    cpu->registers.ip += instruction_size;
+    cpu_set_register_16(cpu, IP, ip + instruction_size);
 
     if (instruction.type == HLT) {
       break;
@@ -669,74 +616,60 @@ void cpu_run(struct cpu *cpu) {
     fflush(stdout);
     interpret_instruction(cpu, &instruction);
 
-    print_registers(&cpu->registers);
+    print_registers(cpu->registers);
   }
 }
 
-u8 cpu_peek_u8(struct cpu *cpu, int offset) {
-  return bus_fetch(cpu->bus, segment_offset(0, cpu->registers.ip + offset));
-}
-
-i8 cpu_peek_i8(struct cpu *cpu, int offset) {
-  return (i8)cpu_peek_u8(cpu, offset);
-}
-
-u16 cpu_peek_u16(struct cpu *cpu, int offset) {
-  u16 addr = cpu->registers.ip + offset;
-  return bus_fetch(cpu->bus, segment_offset(0, addr)) +
-         (bus_fetch(cpu->bus, segment_offset(0, addr + 1)) << 8);
-}
-
-i16 cpu_peek_i16(struct cpu *cpu, int offset) {
-  return (i16)cpu_peek_u16(cpu, offset);
-}
-
-u8 cpu_fetch_u8(struct cpu *cpu) {
-  u8 value = cpu_peek_u8(cpu, 0);
-  cpu_advance_ip(cpu, 1);
-  return value;
-}
-
-i8 cpu_fetch_i8(struct cpu *cpu) {
-  i8 value = cpu_peek_i8(cpu, 0);
-  cpu_advance_ip(cpu, 1);
-  return value;
-}
-
-u16 cpu_fetch_u16(struct cpu *cpu) {
-  u16 value = cpu_peek_u16(cpu, 0);
-  cpu_advance_ip(cpu, 2);
-  return value;
-}
-
-i16 cpu_fetch_i16(struct cpu *cpu) {
-  i16 value = cpu_peek_i16(cpu, 0);
-  cpu_advance_ip(cpu, 2);
-  return value;
-}
-
-u16 cpu_advance_ip(struct cpu *cpu, u16 count) {
-  cpu->registers.ip += count;
-  return cpu->registers.ip;
-}
-
 unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size) {
+  u16 cs = cpu_get_segment(cpu, CS);
+  u16 ip = cpu_get_register_16(cpu, IP);
+
   unsigned i = 0;
   for (; i < size; ++i) {
-    buffer[i] = cpu_peek_u8(cpu, i);
+    buffer[i] = bus_fetch(cpu->bus, segment_offset(cs, ip + i));
   }
 
   return i;
 }
 
+u8 cpu_get_register_8(struct cpu *cpu, enum register_8 reg) {
+  if (reg < 4) {
+    return REG_LO(cpu->registers[reg]);
+  } else {
+    return REG_HI(cpu->registers[reg % 4]);
+  }
+}
+
+void cpu_set_register_8(struct cpu *cpu, enum register_8 reg, u8 value) {
+  if (reg < 4) {
+    cpu->registers[reg] = (cpu->registers[reg] & 0xff00) + value;
+  } else {
+    cpu->registers[reg] = (cpu->registers[reg] & 0x00ff) + (value << 8);
+  }
+}
+
+u16 cpu_get_register_16(struct cpu *cpu, enum register_16 reg) {
+  return cpu->registers[reg];
+}
+
+void cpu_set_register_16(struct cpu *cpu, enum register_16 reg, u16 value) {
+  cpu->registers[reg] = value;
+}
+
+u16 cpu_get_segment(struct cpu *cpu, enum segment_register reg) {
+  return cpu->registers[REGISTER_16_COUNT + reg];
+}
+
 u8 cpu_flag_is_set(struct cpu *cpu, enum flags flag) {
-  return (cpu->registers.flags & flag) == flag;
+  u8 flags = cpu_get_register_16(cpu, FLAGS);
+  return (flags & flag) == flag;
 }
 
 void cpu_set_flag(struct cpu *cpu, enum flags flag, u8 value) {
+  u16 flags = cpu_get_register_16(cpu, FLAGS);
   if (!value) {
-    cpu->registers.flags &= ~flag;
+    cpu_set_register_16(cpu, FLAGS, flags & ~flag);
   } else {
-    cpu->registers.flags |= flag;
+    cpu_set_register_16(cpu, FLAGS, flags | flag);
   }
 }

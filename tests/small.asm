@@ -1,3 +1,5 @@
+; sum of odd numbers in the array.
+
 main:
     mov si, data
     mov cl, [si]
