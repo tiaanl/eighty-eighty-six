@@ -16,7 +16,7 @@ struct mod_reg_rm {
   enum indirect_register_encoding rm;
 };
 
-inline struct mod_reg_rm decode_mod_reg_rm(u8 b) {
+static inline struct mod_reg_rm decode_mod_reg_rm(u8 b) {
   struct mod_reg_rm result;
 
   result.mod = (b & 0b11000000) >> 6;
