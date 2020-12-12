@@ -9,14 +9,14 @@ int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *bu
 
 // clang-format off
 struct op_code_mapping op_code_table[] = {
-    /* 00 */ {ADD, MEM_8,  REG_8,  decode_instruction_with_mod_rm},
-    /* 01 */ {ADD, MEM_16, REG_16, decode_instruction_with_mod_rm},
-    /* 02 */ {ADD, REG_8,  MEM_8,  decode_instruction_with_mod_rm},
-    /* 03 */ {ADD, REG_16, MEM_16, decode_instruction_with_mod_rm},
-    /* 04 */ {ADD, REG_AL, IMM_8,  decode_instruction_no_mod_rm},
-    /* 05 */ {ADD, REG_AX, IMM_16, decode_instruction_no_mod_rm},
-    /* 06 */ {NOP},
-    /* 07 */ {NOP},
+    /* 00 */ {ADD,  MEM_8,        REG_8,        decode_instruction_with_mod_rm},
+    /* 01 */ {ADD,  MEM_16,       REG_16,       decode_instruction_with_mod_rm},
+    /* 02 */ {ADD,  REG_8,        MEM_8,        decode_instruction_with_mod_rm},
+    /* 03 */ {ADD,  REG_16,       MEM_16,       decode_instruction_with_mod_rm},
+    /* 04 */ {ADD,  REG_AL,       IMM_8,        decode_instruction_no_mod_rm  },
+    /* 05 */ {ADD,  REG_AX,       IMM_16,       decode_instruction_no_mod_rm  },
+    /* 06 */ {PUSH, OPERAND_NONE, OPERAND_NONE, decode_instruction_no_operands},
+    /* 07 */ {POP,  OPERAND_NONE, OPERAND_NONE, decode_instruction_no_operands},
     /* 08 */ {NOP},
     /* 09 */ {NOP},
     /* 0a */ {NOP},

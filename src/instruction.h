@@ -69,6 +69,8 @@ enum instruction_type {
   LOOP,
   MOV,
   NOP,
+  POP,
+  PUSH,
   TEST,
 };
 

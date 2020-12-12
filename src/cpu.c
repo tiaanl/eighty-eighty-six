@@ -571,6 +571,14 @@ static void interpret_jz(struct cpu *cpu, struct instruction *instruction) {
   }
 }
 
+static void interpret_push(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == PUSH);
+}
+
+static void interpret_pop(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == POP);
+}
+
 static void interpret_instruction(struct cpu *cpu, struct instruction *instruction) {
   switch (instruction->type) {
     case ADD:
@@ -603,7 +611,16 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       interpret_test(cpu, instruction);
       break;
 
+    case PUSH:
+      interpret_push(cpu, instruction);
+      break;
+
+    case POP:
+      interpret_pop(cpu, instruction);
+      break;
+
     default:
+      printf("Unsupported instruction (" HEX_8 ")\n", instruction->type);
       assert(0);
   }
 }
