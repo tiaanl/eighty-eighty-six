@@ -28,14 +28,6 @@ struct cpu {
 void cpu_init(struct cpu *cpu, struct bus *bus);
 void cpu_run(struct cpu *cpu);
 
-u8 cpu_peek_u8(struct cpu *cpu, int offset);
-i8 cpu_peek_i8(struct cpu *cpu, int offset);
-u16 cpu_peek_u16(struct cpu *cpu, int offset);
-i16 cpu_peek_i16(struct cpu *cpu, int offset);
-u8 cpu_fetch_u8(struct cpu *cpu);
-i8 cpu_fetch_i8(struct cpu *cpu);
-u16 cpu_advance_ip(struct cpu *cpu, u16 count);
-
 // Try to fetch the requested amount of bytes from the CPU and return the actual amount
 // fetched.
 unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size);
