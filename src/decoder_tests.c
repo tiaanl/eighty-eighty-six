@@ -1,4 +1,4 @@
-#include "decoder.h"
+#include "decoder/decoder.h"
 #include "platform.h"
 
 #include <assert.h>

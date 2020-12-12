@@ -1,11 +1,11 @@
-#include "instruction.h"
+#include "disassembler.h"
+
+#include "print_format.h"
 
 #include <assert.h>
 #include <stdio.h>
 
 #define MNEMONIC "%-6s"
-#define HEX_8 "0x%02x"
-#define HEX_16 "0x%04x"
 
 const char *register_encoding_to_string(enum register_encoding encoding, enum operand_size size) {
   static const char *reg_values[2][8] = {{"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"},
@@ -104,6 +104,9 @@ void print_operand(const struct operand *operand) {
     case OPERAND_MODE_IMMEDIATE:
       print_immediate(operand);
       break;
+
+    case OPERAND_MODE_NONE:
+      break;
   }
 }
 
@@ -125,4 +128,3 @@ void disassemble_addr(const struct instruction *instruction, u16 addr) {
   printf(HEX_16 "  ", addr);
   disassemble(instruction);
 }
-

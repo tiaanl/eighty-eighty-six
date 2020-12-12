@@ -11,16 +11,20 @@ add_custom_target(assemble
 set(SOURCE_FILES
     ${PROJECT_BINARY_DIR}/small.c
     src/address.h
-    src/bus.h
     src/bus.c
+    src/bus.h
     src/cpu.c
     src/cpu.h
-    src/decoder.c
-    src/decoder.h
+    src/decoder/decoder.c
+    src/decoder/decoder.h
+    src/decoder/mod_rm.h
+    src/decoder/op_code_table.c
+    src/decoder/op_code_table.h
     src/disassembler.c
     src/disassembler.h
     src/instruction.h
     src/platform.h
+    src/print_format.h
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})

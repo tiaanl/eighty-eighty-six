@@ -2,4 +2,6 @@ BasedOnStyle: LLVM
 
 AllowShortFunctionsOnASingleLine: None
 ColumnLimit: 100
+IncludeBlocks: Regroup
 IndentCaseLabels: true
+SortIncludes: true

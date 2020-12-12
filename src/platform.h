@@ -1,15 +1,14 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
-#define u8 unsigned char
-#define u16 unsigned short
-#define u32 unsigned int
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef long long i64;
 
-#define i8 char
-#define i16 short
-#define i32 int
-
-#define HEX_8 "0x%02x"
-#define HEX_16 "0x%04x"
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long long u64;
 
 #endif // PLATFORM_H_

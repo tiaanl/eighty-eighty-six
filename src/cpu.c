@@ -1,12 +1,13 @@
 #include "cpu.h"
 
+#include "bus.h"
+#include "decoder/decoder.h"
+#include "disassembler.h"
+#include "print_format.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "bus.h"
-#include "decoder.h"
-#include "disassembler.h"
 
 const char *register_8_string_map[] = {
     "al", "cl", "dl", "bl", // low bytes
