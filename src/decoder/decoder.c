@@ -41,6 +41,13 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       break;
     }
 
+    case REG_SEG: {
+      instruction->destination.mode = OPERAND_MODE_SEGMENT_REGISTER;
+      instruction->destination.size = OPERAND_SIZE_16;
+      instruction->destination.segment_reg = op_code >> 3 & 0b111;
+      break;
+    }
+
     case REG_8: {
       u8 reg = op_code & 0b111;
       instruction->destination.mode = OPERAND_MODE_REGISTER;

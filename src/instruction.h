@@ -21,6 +21,9 @@ enum operand_mode {
   // When an immediate value was passed.
   OPERAND_MODE_IMMEDIATE = 0b101,
 
+  // Points to a segment register.
+  OPERAND_MODE_SEGMENT_REGISTER = 0b110,
+
   OPERAND_MODE_NONE = 0xff,
 };
 
@@ -46,12 +49,20 @@ enum register_encoding {
   REG_BH_DI = 0b111,
 };
 
+enum segment_register_encoding {
+  SEG_REG_ES = 0b00,
+  SEG_REG_CS = 0b01,
+  SEG_REG_SS = 0b10,
+  SEG_REG_DS = 0b11,
+};
+
 struct operand {
   enum operand_mode mode;
   enum operand_size size;
   union {
     enum indirect_register_encoding indirect_reg;
     enum register_encoding reg;
+    enum segment_register_encoding segment_reg;
   };
   union {
     i8 disp8;

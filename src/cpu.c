@@ -638,6 +638,11 @@ void cpu_run(struct cpu *cpu) {
     memset(buffer, 0, sizeof(buffer));
     unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
 
+    // Special hack to exit decoding.
+    if (buffer[0] == 0xff) {
+      break;
+    }
+
     struct instruction instruction;
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
 

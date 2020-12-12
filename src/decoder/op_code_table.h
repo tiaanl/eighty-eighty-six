@@ -7,6 +7,7 @@ enum operand_type {
   OPERAND_NONE,
   REG_AL,
   REG_AX,
+  REG_SEG,
   MEM_8,
   MEM_16,
   REG_8,

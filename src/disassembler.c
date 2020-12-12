@@ -22,6 +22,17 @@ const char *indirect_register_encoding_to_string(enum indirect_register_encoding
   return reg_values[encoding];
 }
 
+const char *segment_register_encoding_to_string(enum segment_register_encoding encoding) {
+  static const char *values[] = {
+      "es",
+      "cs",
+      "ss",
+      "ds",
+  };
+
+  return values[encoding];
+}
+
 void print_mnemonic(const struct instruction *instruction) {
   switch (instruction->type) {
     case ADD:
@@ -54,6 +65,14 @@ void print_mnemonic(const struct instruction *instruction) {
 
     case TEST:
       printf(MNEMONIC, "test");
+      break;
+
+    case PUSH:
+      printf(MNEMONIC, "push");
+      break;
+
+    case POP:
+      printf(MNEMONIC, "pop");
       break;
   }
 }
@@ -103,6 +122,10 @@ void print_operand(const struct operand *operand) {
 
     case OPERAND_MODE_IMMEDIATE:
       print_immediate(operand);
+      break;
+
+    case OPERAND_MODE_SEGMENT_REGISTER:
+      printf("%s", segment_register_encoding_to_string(operand->segment_reg));
       break;
 
     case OPERAND_MODE_NONE:
