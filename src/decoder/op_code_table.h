@@ -22,6 +22,8 @@ struct op_code_mapping {
   enum instruction_type instruction_type;
   enum operand_type destination_operand_type;
   enum operand_type source_operand_type;
+  enum operand_type third;
+  enum operand_type fourth;
   int (*decoder_func)(struct op_code_mapping *, const u8 *, unsigned, struct instruction *);
 };
 

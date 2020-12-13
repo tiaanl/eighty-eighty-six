@@ -13,6 +13,18 @@ void prefix_segment_override(u8 prefix, struct instruction *instruction) {
       instruction->segment_register = CS;
       break;
 
+    case 0x26:
+      instruction->segment_register = ES;
+      break;
+
+    case 0x3e:
+      instruction->segment_register = DS;
+      break;
+
+    case 0x36:
+      instruction->segment_register = SS;
+      break;
+
     default:
       assert(0);
   }
@@ -23,6 +35,7 @@ struct prefix_func_table {
   prefix_func func;
 } prefix_func_table[] = {
     {0x2e, prefix_segment_override},
+    {0x36, prefix_segment_override},
 };
 
 int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *buffer,

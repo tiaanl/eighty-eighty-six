@@ -35,70 +35,24 @@ const char *segment_register_encoding_to_string(enum segment_register_encoding e
 }
 
 void print_mnemonic(const struct instruction *instruction) {
-  switch (instruction->type) {
-    case ADD:
-      printf(MNEMONIC, "add");
-      break;
+  static const char *mnemonics[] = {
+      "AAA",       "AAD",       "AAM",       "AAS",       "ADC",       "ADD",       "AND",
+      "ARPL",      "BOUND",     "CALL",      "CALLF",     "CBW",       "CLC",       "CLD",
+      "CLI",       "CMC",       "CMP",       "CWD",       "DAA",       "DAS",       "DEC",
+      "ENTER",     "FWAIT",     "HLT",       "IMUL",      "IN",        "INC",       "INT",
+      "INT1",      "INT3",      "INTO",      "IRET",      "JAE",       "JB",        "JBE",
+      "JCXZ",      "JL",        "JLE",       "JMP",       "JMPF",      "JNB",       "JNBE",
+      "JNL",       "JNLE",      "JNO",       "JNP",       "JNS",       "JNZ",       "JO",
+      "JP",        "JS",        "JZ",        "LAHF",      "LDS",       "LEA",       "LEAVE",
+      "LES",       "LOOP",      "LOOPE",     "LOOPNE",    "MOV",       "NOP",       "OR",
+      "OUT",       "POP",       "POPA",      "POPF",      "PUSH",      "PUSHA",     "PUSHF",
+      "REP_CMPSB", "REP_CMPSW", "REP_INSB",  "REP_INSW",  "REP_LODSB", "REP_LODSW", "REP_MOVSB",
+      "REP_MOVSW", "REP_OUTSB", "REP_OUTSW", "REP_SCASB", "REP_SCASW", "REP_STOSB", "REP_STOSW",
+      "RET",       "RETF",      "SAHF",      "SALC",      "SAR",       "SBB",       "STC",
+      "STD",       "STI",       "SUB",       "TEST",      "XCHG",      "XLAT",      "XOR",
+  };
 
-    case HLT:
-      printf(MNEMONIC, "hlt");
-      break;
-
-    case INC:
-      printf(MNEMONIC, "inc");
-      break;
-
-    case JZ:
-      printf(MNEMONIC, "je");
-      break;
-
-    case LOOP:
-      printf(MNEMONIC, "loop");
-      break;
-
-    case MOV:
-      printf(MNEMONIC, "mov");
-      break;
-
-    case NOP:
-      printf(MNEMONIC, "nop");
-      break;
-
-    case TEST:
-      printf(MNEMONIC, "test");
-      break;
-
-    case PUSH:
-      printf(MNEMONIC, "push");
-      break;
-
-    case POP:
-      printf(MNEMONIC, "pop");
-      break;
-
-    case INT:
-      printf(MNEMONIC, "int");
-      break;
-
-    case OR:
-      printf(MNEMONIC, "or");
-      break;
-
-    case CMP:
-      printf(MNEMONIC, "cmp");
-      break;
-
-    case JAE:
-      printf(MNEMONIC, "jae");
-      break;
-
-    case RET:
-      printf(MNEMONIC, "ret");
-      break;
-
-    default:
-      assert(0);
-  }
+  printf(MNEMONIC, mnemonics[instruction->type]);
 }
 
 void print_immediate(const struct operand *operand) {
