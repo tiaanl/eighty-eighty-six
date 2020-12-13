@@ -2,6 +2,9 @@
 #define INSTRUCTION_H_
 
 #include "platform.h"
+#include "registers.h"
+
+#include <string.h>
 
 enum operand_size {
   OPERAND_SIZE_8 = 0b0,
@@ -74,19 +77,25 @@ struct operand {
 
 enum instruction_type {
   ADD,
+  CMP,
   HLT,
   INC,
+  INT,
+  JAE,
   JZ,
   LOOP,
   MOV,
   NOP,
+  OR,
   POP,
   PUSH,
+  RET,
   TEST,
 };
 
 struct instruction {
   enum instruction_type type;
+  enum segment_register segment_register;
   struct operand destination;
   struct operand source;
 };

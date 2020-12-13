@@ -1,5 +1,6 @@
 #include "disassembler.h"
 
+#include "cpu.h"
 #include "print_format.h"
 
 #include <assert.h>
@@ -74,6 +75,29 @@ void print_mnemonic(const struct instruction *instruction) {
     case POP:
       printf(MNEMONIC, "pop");
       break;
+
+    case INT:
+      printf(MNEMONIC, "int");
+      break;
+
+    case OR:
+      printf(MNEMONIC, "or");
+      break;
+
+    case CMP:
+      printf(MNEMONIC, "cmp");
+      break;
+
+    case JAE:
+      printf(MNEMONIC, "jae");
+      break;
+
+    case RET:
+      printf(MNEMONIC, "ret");
+      break;
+
+    default:
+      assert(0);
   }
 }
 
@@ -93,7 +117,7 @@ void print_immediate(const struct operand *operand) {
   }
 }
 
-void print_operand(const struct operand *operand) {
+void print_operand(const struct operand *operand, enum segment_register segment_register) {
   switch (operand->mode) {
     case OPERAND_MODE_INDIRECT:
       if (operand->size == OPERAND_SIZE_8) {
@@ -117,7 +141,7 @@ void print_operand(const struct operand *operand) {
       break;
 
     case OPERAND_MODE_DIRECT:
-      printf("[" HEX_16 "]", operand->disp16);
+      printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register), operand->disp16);
       break;
 
     case OPERAND_MODE_IMMEDIATE:
@@ -136,13 +160,13 @@ void print_operand(const struct operand *operand) {
 void disassemble(const struct instruction *instruction) {
   print_mnemonic(instruction);
 
-  print_operand(&instruction->destination);
+  print_operand(&instruction->destination, instruction->segment_register);
 
   if (instruction->source.mode != OPERAND_MODE_NONE) {
     printf(", ");
   }
 
-  print_operand(&instruction->source);
+  print_operand(&instruction->source, instruction->segment_register);
 
   printf("\n");
 }

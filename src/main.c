@@ -8,6 +8,8 @@
 extern unsigned char small[];
 extern unsigned int small_len;
 
+#include "../tests/xwing.com.c"
+
 u8 mem_fetch(void *obj, struct address address) {
   u8 *memory = obj;
 
@@ -24,9 +26,10 @@ int main(void) {
   struct bus bus;
   bus_init(&bus);
 
-  u8 *memory = malloc(0xfff);
+  u8 *memory = malloc(0xffff);
 
-  memcpy(memory, small, small_len);
+  // memcpy(memory, small, small_len);
+  memcpy(memory, XWING_COM, XWING_COM_len);
 
   bus_add_mapping(&bus, 0x0000, 0xffff, memory, mem_fetch, mem_store);
 

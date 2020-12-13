@@ -25,6 +25,7 @@ set(SOURCE_FILES
     src/instruction.h
     src/platform.h
     src/print_format.h
+    src/registers.h
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})

@@ -4,7 +4,26 @@
 #include "op_code_table.h"
 
 #include <assert.h>
-#include <string.h>
+
+typedef void (*prefix_func)(u8, struct instruction *);
+
+void prefix_segment_override(u8 prefix, struct instruction *instruction) {
+  switch (prefix) {
+    case 0x2e:
+      instruction->segment_register = CS;
+      break;
+
+    default:
+      assert(0);
+  }
+}
+
+struct prefix_func_table {
+  u8 prefix_code;
+  prefix_func func;
+} prefix_func_table[] = {
+    {0x2e, prefix_segment_override},
+};
 
 int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *buffer,
                                    unsigned buffer_size, struct instruction *instruction) {
@@ -76,6 +95,13 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       instruction->destination.size = OPERAND_SIZE_16;
       instruction->destination.disp16 = (i16)(buffer[1] + (buffer[2] << 8));
       instruction_size += 2;
+      break;
+
+    case IMM_8:
+      instruction->destination.mode = OPERAND_MODE_IMMEDIATE;
+      instruction->destination.size = OPERAND_SIZE_8;
+      instruction->destination.immediate8 = buffer[1];
+      instruction_size += 1;
       break;
 
     default:
@@ -178,6 +204,15 @@ static int decode_immediate_operand(struct mod_reg_rm mrm, enum operand_size ope
   return -1;
 }
 
+static int decode_segment_register_operand(struct mod_reg_rm mrm, const u8 *buffer,
+                                           struct operand *operand) {
+  operand->mode = OPERAND_MODE_SEGMENT_REGISTER;
+  operand->size = OPERAND_SIZE_16;
+  operand->segment_reg = mrm.reg;
+
+  return 0;
+}
+
 static int decode_operand(enum operand_type type, struct mod_reg_rm mrm, const u8 *buffer,
                           struct operand *operand) {
   switch (type) {
@@ -198,6 +233,9 @@ static int decode_operand(enum operand_type type, struct mod_reg_rm mrm, const u
 
     case IMM_16:
       return decode_immediate_operand(mrm, OPERAND_SIZE_16, buffer, operand);
+
+    case REG_SEG:
+      return decode_segment_register_operand(mrm, buffer, operand);
 
     default:
       assert(0);
@@ -229,6 +267,17 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
   int instruction_size = 0;
 
   u8 op_code = buffer[0];
+
+  // If the `op_code` equals one of the prefix codes, then we advance the buffer by one and call
+  // the `decode_instruction` function again, leaving the current instruction state in tact.  Then
+  // We return the instruction size of that call + 1 for the prefix byte we processed.
+  for (unsigned i = 0; i < sizeof(prefix_func_table) / sizeof(struct prefix_func_table); ++i) {
+    if (op_code == prefix_func_table[i].prefix_code) {
+      prefix_func_table[i].func(op_code, instruction);
+      return 1 + decode_instruction(buffer + 1, buffer_size - 1, instruction);
+    }
+  }
+
   struct op_code_mapping *mapping;
   if (op_code != 0x0f) {
     mapping = &op_code_table[op_code];
@@ -244,9 +293,7 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
   }
 
   if (mapping->decoder_func != 0) {
-    memset(instruction, 0, sizeof(struct instruction));
-    instruction_size += mapping->decoder_func(mapping, buffer, buffer_size, instruction);
-    return instruction_size;
+    return instruction_size + mapping->decoder_func(mapping, buffer, buffer_size, instruction);
   } else {
     return -2;
   }

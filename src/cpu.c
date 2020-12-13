@@ -631,7 +631,7 @@ void cpu_init(struct cpu *cpu, struct bus *bus) {
 }
 
 void cpu_run(struct cpu *cpu) {
-  print_registers(cpu->registers);
+  // print_registers(cpu->registers);
 
   while (1) {
     u8 buffer[16];
@@ -644,6 +644,7 @@ void cpu_run(struct cpu *cpu) {
     }
 
     struct instruction instruction;
+    memset(&instruction, 0, sizeof(struct instruction));
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
 
     if (instruction_size < 0) {
@@ -667,10 +668,10 @@ void cpu_run(struct cpu *cpu) {
       break;
     }
 
-    fflush(stdout);
-    interpret_instruction(cpu, &instruction);
-
-    print_registers(cpu->registers);
+    //    fflush(stdout);
+    //    interpret_instruction(cpu, &instruction);
+    //
+    //    print_registers(cpu->registers);
   }
 }
 
