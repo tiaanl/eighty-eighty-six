@@ -106,69 +106,11 @@ static u8 get_operand_indirect_value_8(struct operand *operand, struct cpu *cpu)
 }
 
 static u8 get_operand_register_value_8(struct operand *operand, struct cpu *cpu) {
-  switch (operand->reg) {
-    case MRRM_REG_AL_AX:
-      return cpu_get_register_8(cpu, AL);
-
-    case MRRM_REG_CL_CX:
-      return cpu_get_register_8(cpu, CL);
-
-    case MRRM_REG_DL_DX:
-      return cpu_get_register_8(cpu, DL);
-
-    case MRRM_REG_BL_BX:
-      return cpu_get_register_8(cpu, BL);
-
-    case MRRM_REG_AH_SP:
-      return cpu_get_register_8(cpu, AH);
-
-    case MRRM_REG_CH_BP:
-      return cpu_get_register_8(cpu, CH);
-
-    case MRRM_REG_DH_SI:
-      return cpu_get_register_8(cpu, DH);
-
-    case MRRM_REG_BH_DI:
-      return cpu_get_register_8(cpu, BH);
-
-    default:
-      assert(0);
-  }
-
-  return 0;
+  return cpu->reg_8[operand->reg_8];
 }
 
 static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cpu) {
-  switch (operand->reg) {
-    case MRRM_REG_AL_AX:
-      return cpu_get_register_16(cpu, AX);
-
-    case MRRM_REG_CL_CX:
-      return cpu_get_register_16(cpu, CX);
-
-    case MRRM_REG_DL_DX:
-      return cpu_get_register_16(cpu, DX);
-
-    case MRRM_REG_BL_BX:
-      return cpu_get_register_16(cpu, BX);
-
-    case MRRM_REG_AH_SP:
-      return cpu_get_register_16(cpu, SP);
-
-    case MRRM_REG_CH_BP:
-      return cpu_get_register_16(cpu, BP);
-
-    case MRRM_REG_DH_SI:
-      return cpu_get_register_16(cpu, SI);
-
-    case MRRM_REG_BH_DI:
-      return cpu_get_register_16(cpu, DI);
-
-    default:
-      assert(0);
-  }
-
-  return 0;
+  return cpu->reg_16[operand->reg_16];
 }
 
 static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
@@ -245,81 +187,11 @@ static void set_operand_indirect_value_16(struct operand *operand, struct cpu *c
 }
 
 static void set_operand_register_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
-  switch (operand->reg) {
-    case MRRM_REG_AL_AX:
-      cpu_set_register_8(cpu, AL, value);
-      break;
-
-    case MRRM_REG_CL_CX:
-      cpu_set_register_8(cpu, CL, value);
-      break;
-
-    case MRRM_REG_DL_DX:
-      cpu_set_register_8(cpu, DL, value);
-      break;
-
-    case MRRM_REG_BL_BX:
-      cpu_set_register_8(cpu, BL, value);
-      break;
-
-    case MRRM_REG_AH_SP:
-      cpu_set_register_8(cpu, AH, value);
-      break;
-
-    case MRRM_REG_CH_BP:
-      cpu_set_register_8(cpu, CH, value);
-      break;
-
-    case MRRM_REG_DH_SI:
-      cpu_set_register_8(cpu, DH, value);
-      break;
-
-    case MRRM_REG_BH_DI:
-      cpu_set_register_8(cpu, BH, value);
-      break;
-
-    default:
-      assert(0);
-  }
+  cpu->reg_8[operand->reg_8] = value;
 }
 
 static void set_operand_register_value_16(struct operand *operand, struct cpu *cpu, u16 value) {
-  switch (operand->reg) {
-    case MRRM_REG_AL_AX:
-      cpu_set_register_16(cpu, AX, value);
-      break;
-
-    case MRRM_REG_CL_CX:
-      cpu_set_register_16(cpu, CX, value);
-      break;
-
-    case MRRM_REG_DL_DX:
-      cpu_set_register_16(cpu, DX, value);
-      break;
-
-    case MRRM_REG_BL_BX:
-      cpu_set_register_16(cpu, BX, value);
-      break;
-
-    case MRRM_REG_AH_SP:
-      cpu_set_register_16(cpu, SP, value);
-      break;
-
-    case MRRM_REG_CH_BP:
-      cpu_set_register_16(cpu, BP, value);
-      break;
-
-    case MRRM_REG_DH_SI:
-      cpu_set_register_16(cpu, SI, value);
-      break;
-
-    case MRRM_REG_BH_DI:
-      cpu_set_register_16(cpu, DI, value);
-      break;
-
-    default:
-      assert(0);
-  }
+  cpu->reg_16[operand->reg_16] = value;
 }
 
 static void set_operand_value_8(struct operand *operand, struct cpu *cpu, u8 value) {

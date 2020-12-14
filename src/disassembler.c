@@ -91,7 +91,18 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       break;
 
     case OPERAND_MODE_REGISTER:
-      printf("%s", register_encoding_to_string(operand->reg, operand->size));
+      switch (operand->size) {
+        case OPERAND_SIZE_8:
+          printf("%s", register_8_to_string(operand->reg_8));
+          break;
+
+        case OPERAND_SIZE_16:
+          printf("%s", register_16_to_string(operand->reg_16));
+          break;
+
+        default:
+          assert(0);
+      }
       break;
 
     case OPERAND_MODE_DIRECT:

@@ -43,7 +43,10 @@ struct operand {
   enum operand_size size;
   union {
     enum mrrm_rm indirect_reg;
-    enum mrrm_reg reg;
+    union {
+      enum register_8 reg_8;
+      enum register_16 reg_16;
+    };
     enum segment_register_encoding segment_reg;
   };
   union {
