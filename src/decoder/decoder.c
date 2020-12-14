@@ -34,8 +34,10 @@ struct prefix_func_table {
   u8 prefix_code;
   prefix_func func;
 } prefix_func_table[] = {
+    {0x26, prefix_segment_override},
     {0x2e, prefix_segment_override},
     {0x36, prefix_segment_override},
+    {0x3e, prefix_segment_override},
 };
 
 int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *buffer,
@@ -80,6 +82,7 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       break;
     }
 
+    case MEM_8:
     case REG_8: {
       u8 reg = op_code & 0b111;
       instruction->destination.mode = OPERAND_MODE_REGISTER;
@@ -88,6 +91,7 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       break;
     }
 
+    case MEM_16:
     case REG_16: {
       u8 reg = op_code & 0b111;
       instruction->destination.mode = OPERAND_MODE_REGISTER;
@@ -117,6 +121,9 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       instruction_size += 1;
       break;
 
+    case OPERAND_NONE:
+      break;
+
     default:
       assert(0);
   }
@@ -138,6 +145,18 @@ int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buff
       instruction->source.size = OPERAND_SIZE_16;
       instruction->source.immediate16 = buffer[1] + (buffer[2] << 8);
       instruction_size += 2;
+      break;
+
+    case REG_AL:
+      instruction->source.mode = OPERAND_MODE_REGISTER;
+      instruction->source.size = OPERAND_SIZE_8;
+      instruction->source.reg = REG_AL_AX;
+      break;
+
+    case REG_AX:
+      instruction->source.mode = OPERAND_MODE_REGISTER;
+      instruction->source.size = OPERAND_SIZE_16;
+      instruction->source.reg = REG_AL_AX;
       break;
 
     default:
@@ -250,6 +269,9 @@ static int decode_operand(enum operand_type type, struct mod_reg_rm mrm, const u
     case REG_SEG:
       return decode_segment_register_operand(mrm, buffer, operand);
 
+    case OPERAND_NONE:
+      break;
+
     default:
       assert(0);
   }
@@ -272,6 +294,13 @@ int decode_instruction_with_mod_rm(struct op_code_mapping *mapping, const u8 *bu
       decode_operand(mapping->source_operand_type, mrm, buffer, &instruction->source);
 
   return instruction_size;
+}
+
+int decode_instruction_skip(struct op_code_mapping *mapping, const u8 *buffer,
+                            unsigned buffer_size, struct instruction *instruction) {
+  instruction->type = NOP;
+
+  return 1;
 }
 
 int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instruction *instruction) {
@@ -301,9 +330,9 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
     mapping = &op_code_table_0f[op_code];
   }
 
-  if (mapping->instruction_type == NOP) {
-    return -1;
-  }
+//  if (mapping->instruction_type == NOP) {
+//    return -1;
+//  }
 
   if (mapping->decoder_func != 0) {
     return instruction_size + mapping->decoder_func(mapping, buffer, buffer_size, instruction);

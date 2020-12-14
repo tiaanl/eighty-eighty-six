@@ -638,11 +638,6 @@ void cpu_run(struct cpu *cpu) {
     memset(buffer, 0, sizeof(buffer));
     unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
 
-    // Special hack to exit decoding.
-    if (buffer[0] == 0xff) {
-      break;
-    }
-
     struct instruction instruction;
     memset(&instruction, 0, sizeof(struct instruction));
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
@@ -665,6 +660,7 @@ void cpu_run(struct cpu *cpu) {
     cpu_set_register_16(cpu, IP, ip + instruction_size);
 
     if (instruction.type == HLT) {
+      printf("HALT HALT HALT!\n");
       break;
     }
 
