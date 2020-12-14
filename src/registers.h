@@ -3,31 +3,27 @@
 
 enum register_8 {
   AL,
-  CL,
-  DL,
-  BL,
-
   AH,
-  CH,
-  DH,
+  BL,
   BH,
+  CL,
+  CH,
+  DL,
+  DH,
 
   REGISTER_8_COUNT,
 };
 
 enum register_16 {
   AX,
+  BX,
   CX,
   DX,
-  BX,
 
   SP,
   BP,
   SI,
   DI,
-
-  IP,
-  FLAGS,
 
   REGISTER_16_COUNT,
 };

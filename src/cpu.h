@@ -6,8 +6,6 @@
 
 struct bus;
 
-
-
 const char *register_8_to_string(enum register_8 reg);
 const char *register_16_to_string(enum register_16 reg);
 const char *segment_register_to_string(enum segment_register reg);
@@ -25,8 +23,14 @@ enum flags {
 };
 
 struct cpu {
-  // AX, CX, DX, BX, SP, BP, SI, DI, IP, FLAGS, ES, CS, SS, DS
-  u16 registers[14];
+  union {
+    u16 reg_16[REGISTER_16_COUNT];
+    u8 reg_8[REGISTER_8_COUNT];
+  };
+  u16 ip;
+  u16 flags;
+  u16 segments[SEGMENT_REGISTER_COUNT];
+
   struct bus *bus;
 };
 

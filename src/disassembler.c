@@ -8,14 +8,14 @@
 
 #define MNEMONIC "%-6s"
 
-const char *register_encoding_to_string(enum register_encoding encoding, enum operand_size size) {
+const char *register_encoding_to_string(enum mrrm_reg encoding, enum operand_size size) {
   static const char *reg_values[2][8] = {{"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"},
                                          {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"}};
 
   return reg_values[size][encoding];
 }
 
-const char *indirect_register_encoding_to_string(enum indirect_register_encoding encoding) {
+const char *indirect_register_encoding_to_string(enum mrrm_rm encoding) {
   static const char *reg_values[8] = {
       "bx:si", "bx:di", "bp:si", "bp:di", "si", "di", "bp", "bx",
   };

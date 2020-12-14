@@ -1,70 +1,49 @@
 #ifndef INSTRUCTION_H_
 #define INSTRUCTION_H_
 
+#include "decoder/mod_reg_rm.h"
 #include "platform.h"
 #include "registers.h"
 
 #include <string.h>
 
 enum operand_size {
-  OPERAND_SIZE_8 = 0b0,
-  OPERAND_SIZE_16 = 0b1,
+  OPERAND_SIZE_8 = 0x00,
+  OPERAND_SIZE_16 = 0x01,
 };
 
 enum operand_mode {
   // MOD bits on modR/M
-  OPERAND_MODE_INDIRECT = 0b000,
-  OPERAND_MODE_DISPLACEMENT_8 = 0b001,
-  OPERAND_MODE_DISPLACEMENT_16 = 0b010,
-  OPERAND_MODE_REGISTER = 0b011,
+  OPERAND_MODE_INDIRECT,        // 0b00
+  OPERAND_MODE_DISPLACEMENT_8,  // 0b01
+  OPERAND_MODE_DISPLACEMENT_16, // 0b10
+  OPERAND_MODE_REGISTER,        // 0b11
 
   // Special when MOD == INDIRECT and R/M == 0b101.
-  OPERAND_MODE_DIRECT = 0b100,
+  OPERAND_MODE_DIRECT,
 
   // When an immediate value was passed.
-  OPERAND_MODE_IMMEDIATE = 0b101,
+  OPERAND_MODE_IMMEDIATE,
 
   // Points to a segment register.
-  OPERAND_MODE_SEGMENT_REGISTER = 0b110,
+  OPERAND_MODE_SEGMENT_REGISTER,
 
   OPERAND_MODE_NONE = 0xff,
 };
 
-enum indirect_register_encoding {
-  INDIRECT_REG_BX_SI,
-  INDIRECT_REG_BX_DI,
-  INDIRECT_REG_BP_SI,
-  INDIRECT_REG_BP_DI,
-  INDIRECT_REG_SI,
-  INDIRECT_REG_DI,
-  INDIRECT_REG_BP,
-  INDIRECT_REG_BX,
-};
-
-enum register_encoding {
-  REG_AL_AX = 0b000,
-  REG_CL_CX = 0b001,
-  REG_DL_DX = 0b010,
-  REG_BL_BX = 0b011,
-  REG_AH_SP = 0b100,
-  REG_CH_BP = 0b101,
-  REG_DH_SI = 0b110,
-  REG_BH_DI = 0b111,
-};
-
 enum segment_register_encoding {
-  SEG_REG_ES = 0b00,
-  SEG_REG_CS = 0b01,
-  SEG_REG_SS = 0b10,
-  SEG_REG_DS = 0b11,
+  SEG_REG_ES, // 0b00
+  SEG_REG_CS, // 0b01
+  SEG_REG_SS, // 0b10
+  SEG_REG_DS, // 0b11
 };
 
 struct operand {
   enum operand_mode mode;
   enum operand_size size;
   union {
-    enum indirect_register_encoding indirect_reg;
-    enum register_encoding reg;
+    enum mrrm_rm indirect_reg;
+    enum mrrm_reg reg;
     enum segment_register_encoding segment_reg;
   };
   union {
