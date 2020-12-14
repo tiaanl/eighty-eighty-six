@@ -79,7 +79,7 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       } else if (operand->size == OPERAND_SIZE_16) {
         printf("WORD ");
       }
-      printf("[%s]", indirect_register_encoding_to_string(operand->indirect_reg));
+      printf("[%s]", register_16_to_string(operand->reg_16));
       break;
 
     case OPERAND_MODE_DISPLACEMENT_8:

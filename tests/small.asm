@@ -1,6 +1,9 @@
 ; sum of odd numbers in the array.
 
-    push es
+    ;inc cx
+    ;inc bx
+
+    add word [bp+0x0102], 0x0242
 
 ;main:
 ;    mov si, data
@@ -26,5 +29,3 @@
 ;    db 0x28
 ;    db 0x07
 ;    db 0x08
-
-db 0xff

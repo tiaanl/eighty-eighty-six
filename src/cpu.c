@@ -53,7 +53,7 @@ static void print_registers(struct cpu *cpu) {
 struct address get_operand_indirect_address(struct operand *operand, struct cpu *cpu) {
   struct address result;
 
-  switch (operand->indirect_reg) {
+  switch (operand->reg_16) {
     case MRRM_RM_BX_SI:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, SI));
       break;

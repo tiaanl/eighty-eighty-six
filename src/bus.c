@@ -8,6 +8,7 @@ void bus_init(struct bus *bus) {
 }
 
 void bus_destroy(struct bus *bus) {
+  (void)bus;
   // TODO
 }
 
