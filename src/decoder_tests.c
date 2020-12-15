@@ -5,11 +5,10 @@
 #include <assert.h>
 
 #define ASSERT_OPERAND_INDIRECT(Size)                                                              \
-  void assert_operand_indirect_##Size(struct operand *operand, enum register_16 reg) {             \
-    assert(operand->mode == OPERAND_MODE_INDIRECT);                                                \
-    assert(operand->size == OPERAND_SIZE_##Size);                                                  \
-    assert(operand->reg_16 == reg);                                                                \
-    assert(operand->disp##Size == 0);                                                              \
+  void assert_operand_indirect_##Size(struct operand *operand, enum indirect_encoding encoding) {  \
+    assert(operand->type == OT_INDIRECT);                                                          \
+    assert(operand->size == OS_##Size);                                                            \
+    assert(operand->as_indirect.encoding == encoding);                                             \
   }
 
 ASSERT_OPERAND_INDIRECT(8)
@@ -19,10 +18,9 @@ ASSERT_OPERAND_INDIRECT(16)
 
 #define ASSERT_OPERAND_REG(Size)                                                                   \
   void assert_operand_reg_##Size(struct operand *operand, enum register_##Size reg) {              \
-    assert(operand->mode == OPERAND_MODE_REGISTER);                                                \
-    assert(operand->size == OPERAND_SIZE_##Size);                                                  \
-    assert(operand->reg_##Size == reg);                                                            \
-    assert(operand->disp##Size == 0);                                                              \
+    assert(operand->type == OT_REGISTER);                                                          \
+    assert(operand->size == OS_##Size);                                                            \
+    assert(operand->as_register.reg_##Size == reg);                                                \
   }
 
 ASSERT_OPERAND_REG(8)
@@ -30,22 +28,27 @@ ASSERT_OPERAND_REG(16)
 
 #undef ASSERT_OPERAND_REG
 
-void assert_operand_immediate(struct operand *operand, enum operand_size operand_size,
-                              u16 immediate) {
-  assert(operand->mode == OPERAND_MODE_IMMEDIATE);
-  assert(operand->size == operand_size);
-  assert(operand->immediate16 == immediate);
-}
+#define ASSERT_OPERAND_IMMEDIATE(Size)                                                             \
+  void assert_operand_immediate_##Size(struct operand *operand, u##Size immediate) {               \
+    assert(operand->type == OT_IMMEDIATE);                                                         \
+    assert(operand->size == OS_##Size);                                                            \
+    assert(operand->as_immediate.immediate_##Size == immediate);                                   \
+  }
+
+ASSERT_OPERAND_IMMEDIATE(8)
+ASSERT_OPERAND_IMMEDIATE(16)
+
+#undef ASSERT_OPERAND_IMMEDIATE
 
 void assert_operand_none(struct operand *operand) {
-  assert(operand->mode == OPERAND_MODE_NONE);
+  assert(operand->type == OT_NONE);
 }
 
 #define ASSERT_OPERAND_JUMP_DISPLACEMENT(SIZE)                                                     \
-  void assert_operand_jump_displacement_##SIZE(struct operand *operand, i##SIZE displacement) {    \
-    assert(operand->mode == OPERAND_MODE_DISPLACEMENT_##SIZE);                                     \
-    assert(operand->size == OPERAND_SIZE_##SIZE);                                                  \
-    assert(operand->disp##SIZE == displacement);                                                   \
+  void assert_operand_jump_displacement_##SIZE(struct operand *operand, i16 displacement) {    \
+    assert(operand->type == OT_DISPLACEMENT);                                                      \
+    assert(operand->size == OS_##SIZE);                                                            \
+    assert(operand->as_displacement.displacement == displacement);                                 \
   }
 
 ASSERT_OPERAND_JUMP_DISPLACEMENT(8)
@@ -106,7 +109,7 @@ void test_04(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
   assert_operand_reg_8(&i.destination, AL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x08);
+  assert_operand_immediate_8(&i.source, 0x08);
 }
 
 void test_05(void) {
@@ -298,7 +301,7 @@ void test_b0(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, AL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb0);
+  assert_operand_immediate_8(&i.source, 0xb0);
 }
 
 void test_b1(void) {
@@ -309,7 +312,7 @@ void test_b1(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, CL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb1);
+  assert_operand_immediate_8(&i.source, 0xb1);
 }
 
 void test_b2(void) {
@@ -320,7 +323,7 @@ void test_b2(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, DL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb2);
+  assert_operand_immediate_8(&i.source, 0xb2);
 }
 
 void test_b3(void) {
@@ -331,7 +334,7 @@ void test_b3(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb3);
+  assert_operand_immediate_8(&i.source, 0xb3);
 }
 
 void test_b4(void) {
@@ -342,7 +345,7 @@ void test_b4(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, AH);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb4);
+  assert_operand_immediate_8(&i.source, 0xb4);
 }
 
 void test_b5(void) {
@@ -353,7 +356,7 @@ void test_b5(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, CH);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb5);
+  assert_operand_immediate_8(&i.source, 0xb5);
 }
 
 void test_b6(void) {
@@ -364,7 +367,7 @@ void test_b6(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, DH);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb6);
+  assert_operand_immediate_8(&i.source, 0xb6);
 }
 
 void test_b7(void) {
@@ -375,7 +378,7 @@ void test_b7(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, BH);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0xb7);
+  assert_operand_immediate_8(&i.source, 0xb7);
 }
 
 void test_b8(void) {
@@ -386,7 +389,7 @@ void test_b8(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, AX);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xb8b8);
+  assert_operand_immediate_16(&i.source, 0xb8b8);
 }
 
 void test_b9(void) {
@@ -397,7 +400,7 @@ void test_b9(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, CX);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xb9b9);
+  assert_operand_immediate_16(&i.source, 0xb9b9);
 }
 
 void test_ba(void) {
@@ -408,7 +411,7 @@ void test_ba(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, DX);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbaba);
+  assert_operand_immediate_16(&i.source, 0xbaba);
 }
 
 void test_bb(void) {
@@ -419,7 +422,7 @@ void test_bb(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, BX);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbbbb);
+  assert_operand_immediate_16(&i.source, 0xbbbb);
 }
 
 void test_bc(void) {
@@ -430,7 +433,7 @@ void test_bc(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, SP);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbcbc);
+  assert_operand_immediate_16(&i.source, 0xbcbc);
 }
 
 void test_bd(void) {
@@ -441,7 +444,7 @@ void test_bd(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, BP);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbdbd);
+  assert_operand_immediate_16(&i.source, 0xbdbd);
 }
 
 void test_be(void) {
@@ -452,7 +455,7 @@ void test_be(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, SI);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbebe);
+  assert_operand_immediate_16(&i.source, 0xbebe);
 }
 
 void test_bf(void) {
@@ -463,7 +466,7 @@ void test_bf(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, DI);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0xbfbf);
+  assert_operand_immediate_16(&i.source, 0xbfbf);
 }
 
 void test_e2(void) {
@@ -485,7 +488,7 @@ void test_f6(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == TEST);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x07);
+  assert_operand_immediate_8(&i.source, 0x07);
 }
 
 void test_f4(void) {
@@ -507,7 +510,7 @@ void test_f7(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 4);
   assert(i.type == TEST);
   assert_operand_reg_16(&i.destination, BX);
-  assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0x0707);
+  assert_operand_immediate_16(&i.source, 0x0707);
 }
 
 #define NOP_TEST(OpCode)                                                                           \

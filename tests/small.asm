@@ -3,7 +3,7 @@
     ;inc cx
     ;inc bx
 
-    add word [bp+0x0102], 0x0242
+    mov cs, ax
 
 ;main:
 ;    mov si, data

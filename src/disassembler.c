@@ -8,48 +8,30 @@
 
 #define MNEMONIC "%-6s"
 
-const char *register_encoding_to_string(enum mrrm_reg encoding, enum operand_size size) {
-  static const char *reg_values[2][8] = {{"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"},
-                                         {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"}};
-
-  return reg_values[size][encoding];
-}
-
-const char *indirect_register_encoding_to_string(enum mrrm_rm encoding) {
-  static const char *reg_values[8] = {
+const char *indirect_encoding_to_string(enum indirect_encoding encoding) {
+  static const char *mapping[8] = {
       "bx:si", "bx:di", "bp:si", "bp:di", "si", "di", "bp", "bx",
   };
 
-  return reg_values[encoding];
-}
-
-const char *segment_register_encoding_to_string(enum segment_register_encoding encoding) {
-  static const char *values[] = {
-      "es",
-      "cs",
-      "ss",
-      "ds",
-  };
-
-  return values[encoding];
+  return mapping[encoding];
 }
 
 void print_mnemonic(const struct instruction *instruction) {
   static const char *mnemonics[] = {
-      "AAA",       "AAD",       "AAM",       "AAS",       "ADC",       "ADD",       "AND",
-      "ARPL",      "BOUND",     "CALL",      "CALLF",     "CBW",       "CLC",       "CLD",
-      "CLI",       "CMC",       "CMP",       "CWD",       "DAA",       "DAS",       "DEC",
-      "ENTER",     "FWAIT",     "HLT",       "IMUL",      "IN",        "INC",       "INT",
-      "INT1",      "INT3",      "INTO",      "IRET",      "JAE",       "JB",        "JBE",
-      "JCXZ",      "JL",        "JLE",       "JMP",       "JMPF",      "JNB",       "JNBE",
-      "JNL",       "JNLE",      "JNO",       "JNP",       "JNS",       "JNZ",       "JO",
-      "JP",        "JS",        "JZ",        "LAHF",      "LDS",       "LEA",       "LEAVE",
-      "LES",       "LOOP",      "LOOPE",     "LOOPNE",    "MOV",       "NOP",       "OR",
-      "OUT",       "POP",       "POPA",      "POPF",      "PUSH",      "PUSHA",     "PUSHF",
-      "REP_CMPSB", "REP_CMPSW", "REP_INSB",  "REP_INSW",  "REP_LODSB", "REP_LODSW", "REP_MOVSB",
-      "REP_MOVSW", "REP_OUTSB", "REP_OUTSW", "REP_SCASB", "REP_SCASW", "REP_STOSB", "REP_STOSW",
-      "RET",       "RETF",      "SAHF",      "SALC",      "SAR",       "SBB",       "STC",
-      "STD",       "STI",       "SUB",       "TEST",      "XCHG",      "XLAT",      "XOR",
+      "aaa",       "aad",       "aam",       "aas",       "adc",       "add",       "and",
+      "arpl",      "bound",     "call",      "callf",     "cbw",       "clc",       "cld",
+      "cli",       "cmc",       "cmp",       "cwd",       "daa",       "das",       "dec",
+      "enter",     "fwait",     "hlt",       "imul",      "in",        "inc",       "int",
+      "int 1",     "int 3",     "into",      "iret",      "jae",       "jb",        "jbe",
+      "jcxz",      "jl",        "jle",       "jmp",       "jmpf",      "jnb",       "jnbe",
+      "jnl",       "jnle",      "jno",       "jnp",       "jns",       "jnz",       "jo",
+      "jp",        "js",        "jz",        "lahf",      "lds",       "lea",       "leave",
+      "les",       "loop",      "loope",     "loopne",    "mov",       "nop",       "or",
+      "out",       "pop",       "popa",      "popf",      "push",      "pusha",     "pushf",
+      "rep cmpsb", "rep cmpsw", "rep insb",  "rep insw",  "rep lodsb", "rep lodsw", "rep movsb",
+      "rep movsw", "rep outsb", "rep outsw", "rep scasb", "rep scasw", "rep stosb", "rep stosw",
+      "ret",       "retf",      "sahf",      "salc",      "sar",       "sbb",       "stc",
+      "std",       "sti",       "sub",       "test",      "xchg",      "xlat",      "xor",
   };
 
   printf(MNEMONIC, mnemonics[instruction->type]);
@@ -57,12 +39,12 @@ void print_mnemonic(const struct instruction *instruction) {
 
 void print_immediate(const struct operand *operand) {
   switch (operand->size) {
-    case OPERAND_SIZE_8:
-      printf(HEX_8, operand->immediate8);
+    case OS_8:
+      printf(HEX_8, operand->as_immediate.immediate_8);
       break;
 
-    case OPERAND_SIZE_16:
-      printf(HEX_16, operand->immediate16);
+    case OS_16:
+      printf(HEX_16, operand->as_immediate.immediate_16);
       break;
 
     default:
@@ -72,32 +54,28 @@ void print_immediate(const struct operand *operand) {
 }
 
 void print_operand(const struct operand *operand, enum segment_register segment_register) {
-  switch (operand->mode) {
-    case OPERAND_MODE_INDIRECT:
-      if (operand->size == OPERAND_SIZE_8) {
+  switch (operand->type) {
+    case OT_INDIRECT:
+      if (operand->size == OS_8) {
         printf("BYTE ");
-      } else if (operand->size == OPERAND_SIZE_16) {
+      } else if (operand->size == OS_16) {
         printf("WORD ");
       }
-      printf("[%s]", register_16_to_string(operand->reg_16));
+      printf("[%s]", indirect_encoding_to_string(operand->as_indirect.encoding));
       break;
 
-    case OPERAND_MODE_DISPLACEMENT_8:
-      printf("%d", operand->disp8);
+    case OT_DISPLACEMENT:
+      printf("%d", operand->as_displacement.displacement);
       break;
 
-    case OPERAND_MODE_DISPLACEMENT_16:
-      printf("%d", operand->disp16);
-      break;
-
-    case OPERAND_MODE_REGISTER:
+    case OT_REGISTER:
       switch (operand->size) {
-        case OPERAND_SIZE_8:
-          printf("%s", register_8_to_string(operand->reg_8));
+        case OS_8:
+          printf("%s", register_8_to_string(operand->as_register.reg_8));
           break;
 
-        case OPERAND_SIZE_16:
-          printf("%s", register_16_to_string(operand->reg_16));
+        case OS_16:
+          printf("%s", register_16_to_string(operand->as_register.reg_16));
           break;
 
         default:
@@ -105,19 +83,24 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       }
       break;
 
-    case OPERAND_MODE_DIRECT:
-      printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register), operand->disp16);
+    case OT_DIRECT:
+      printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register),
+             operand->as_direct.address);
       break;
 
-    case OPERAND_MODE_IMMEDIATE:
+    case OT_IMMEDIATE:
       print_immediate(operand);
       break;
 
-    case OPERAND_MODE_SEGMENT_REGISTER:
-      printf("%s", segment_register_encoding_to_string(operand->segment_reg));
+    case OT_SEGMENT_REGISTER:
+      printf("%s", segment_register_to_string(operand->as_segment_register.reg));
       break;
 
-    case OPERAND_MODE_NONE:
+    case OT_JUMP:
+      printf("%d", operand->as_jump.offset);
+      break;
+
+    case OT_NONE:
       break;
   }
 }
@@ -127,7 +110,7 @@ void disassemble(const struct instruction *instruction) {
 
   print_operand(&instruction->destination, instruction->segment_register);
 
-  if (instruction->source.mode != OPERAND_MODE_NONE) {
+  if (instruction->source.type != OT_NONE) {
     printf(", ");
   }
 

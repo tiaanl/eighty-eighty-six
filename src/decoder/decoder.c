@@ -7,34 +7,6 @@
 
 typedef void (*prefix_func)(u8, struct instruction *);
 
-static inline enum register_8 mrrm_reg_to_register_8(enum mrrm_reg reg) {
-  static const enum register_8 mapping[] = {
-      AL, CL, DL, BL, AH, CH, DH, BH,
-  };
-
-  return mapping[reg];
-}
-
-static inline enum register_16 mrrm_reg_to_register_16(enum mrrm_reg reg) {
-  static const enum register_16 mapping[] = {
-      AX, CX, DX, BX, SP, BP, SI, DI,
-  };
-
-  return mapping[reg];
-}
-
-static inline enum register_8 mrrm_rm_to_register_8(enum mrrm_rm reg) {
-  return mrrm_reg_to_register_8((enum mrrm_reg)reg);
-}
-
-static inline enum register_16 mrrm_rm_to_register_16(enum mrrm_rm reg) {
-  static const enum register_16 mapping[] = {
-      SI, DI, SI, DI, SI, DI, BP, BX,
-  };
-
-  return mapping[reg];
-}
-
 void prefix_segment_override(u8 prefix, struct instruction *instruction) {
   switch (prefix) {
     case 0x2e:
@@ -68,336 +40,271 @@ struct prefix_func_table {
     {0x3e, prefix_segment_override},
 };
 
-int decode_instruction_no_operands(struct op_code_mapping *mapping, const u8 *buffer,
-                                   unsigned buffer_size, struct instruction *instruction) {
-  (void)buffer;
-  (void)buffer_size;
+static inline enum register_8 encoding_to_register_8(u8 encoding) {
+  static const enum register_8 mapping[] = {
+      AL, CL, DL, BL, AH, CH, DH, BH,
+  };
 
-  instruction->type = mapping->instruction_type;
-  instruction->destination.mode = OPERAND_MODE_NONE;
-  instruction->source.mode = OPERAND_MODE_NONE;
-
-  return 1;
+  return mapping[encoding];
 }
 
-int decode_instruction_no_mod_rm(struct op_code_mapping *mapping, const u8 *buffer,
-                                 unsigned buffer_size, struct instruction *instruction) {
-  (void)buffer_size;
+static inline enum register_16 encoding_to_register_16(u8 encoding) {
+  static const enum register_16 mapping[] = {
+      AX, CX, DX, BX, SP, BP, SI, DI,
+  };
 
-  assert(buffer[0] != 0x0f);
-
-  u8 op_code = buffer[0];
-
-  // op_code
-  int instruction_size = 1;
-
-  instruction->type = mapping->instruction_type;
-
-  switch (mapping->destination_operand_type) {
-    case REG_AL: {
-      instruction->destination.mode = OPERAND_MODE_REGISTER;
-      instruction->destination.size = OPERAND_SIZE_8;
-      instruction->destination.reg_8 = AL;
-      break;
-    }
-
-    case REG_AX: {
-      instruction->destination.mode = OPERAND_MODE_REGISTER;
-      instruction->destination.size = OPERAND_SIZE_16;
-      instruction->destination.reg_16 = AX;
-      break;
-    }
-
-    case REG_SEG: {
-      instruction->destination.mode = OPERAND_MODE_SEGMENT_REGISTER;
-      instruction->destination.size = OPERAND_SIZE_16;
-      instruction->destination.segment_reg = op_code >> 3 & 0x07;
-      break;
-    }
-
-    case REG_8: {
-      enum mrrm_reg reg = decode_mrrm_reg_from_rm(op_code);
-      instruction->destination.mode = OPERAND_MODE_REGISTER;
-      instruction->destination.size = OPERAND_SIZE_8;
-      instruction->destination.reg_8 = mrrm_reg_to_register_8(reg);
-      break;
-    }
-
-    case REG_16: {
-      enum mrrm_reg reg = decode_mrrm_reg_from_rm(op_code);
-      instruction->destination.mode = OPERAND_MODE_REGISTER;
-      instruction->destination.size = OPERAND_SIZE_16;
-      instruction->destination.reg_16 = mrrm_reg_to_register_16(reg);
-      break;
-    }
-
-    case JMP_8:
-      instruction->destination.mode = OPERAND_MODE_DISPLACEMENT_8;
-      instruction->destination.size = OPERAND_SIZE_8;
-      instruction->destination.disp8 = (i8)buffer[1];
-      instruction_size += 1;
-      break;
-
-    case JMP_16:
-      instruction->destination.mode = OPERAND_MODE_DISPLACEMENT_16;
-      instruction->destination.size = OPERAND_SIZE_16;
-      instruction->destination.disp16 = (i16)(buffer[1] + (buffer[2] << 8));
-      instruction_size += 2;
-      break;
-
-    case IMM_8:
-      instruction->destination.mode = OPERAND_MODE_IMMEDIATE;
-      instruction->destination.size = OPERAND_SIZE_8;
-      instruction->destination.immediate8 = buffer[1];
-      instruction_size += 1;
-      break;
-
-    case OPERAND_NONE:
-      break;
-
-    default:
-      assert(0);
-  }
-
-  switch (mapping->source_operand_type) {
-    case OPERAND_NONE:
-      instruction->source.mode = OPERAND_MODE_NONE;
-      break;
-
-    case IMM_8:
-      instruction->source.mode = OPERAND_MODE_IMMEDIATE;
-      instruction->source.size = OPERAND_SIZE_8;
-      instruction->source.immediate8 = buffer[1];
-      instruction_size += 1;
-      break;
-
-    case IMM_16:
-      instruction->source.mode = OPERAND_MODE_IMMEDIATE;
-      instruction->source.size = OPERAND_SIZE_16;
-      instruction->source.immediate16 = buffer[1] + (buffer[2] << 8);
-      instruction_size += 2;
-      break;
-
-    case REG_AL:
-      instruction->source.mode = OPERAND_MODE_REGISTER;
-      instruction->source.size = OPERAND_SIZE_8;
-      instruction->source.reg_8 = AL;
-      break;
-
-    case REG_AX:
-      instruction->source.mode = OPERAND_MODE_REGISTER;
-      instruction->source.size = OPERAND_SIZE_16;
-      instruction->source.reg_16 = AX;
-      break;
-
-    default:
-      assert(0);
-  }
-
-  return instruction_size;
+  return mapping[encoding];
 }
 
-static int decode_reg_operand(enum operand_size operand_size, const u8 *buffer,
-                              struct operand *operand) {
-  (void)buffer;
+static inline enum segment_register encoding_to_segment_register(u8 encoding) {
+  static const enum segment_register mapping[] = {ES, CS, SS, DS};
 
-  operand->mode = OPERAND_MODE_REGISTER;
-  operand->size = operand_size;
-  switch (operand_size) {
-    case OPERAND_SIZE_8:
-      operand->reg_8 = mrrm_reg_to_register_8(decode_mrrm_reg(buffer[1]));
-      break;
-
-    case OPERAND_SIZE_16:
-      operand->reg_16 = mrrm_reg_to_register_16(decode_mrrm_reg(buffer[1]));
-      break;
-
-    default:
-      assert(0);
-  }
-
-  return 0;
+  return mapping[encoding];
 }
 
-static int decode_mem_operand(struct mrrm mrrm, enum operand_size operand_size, const u8 *buffer,
-                              struct operand *operand) {
-  operand->size = operand_size;
+struct decode_context {
+  const u8 *buffer;
+  const unsigned buffer_size;
+  u8 flags;
+  unsigned data_read;
+};
 
-  switch (mrrm.mod) {
-    case MRRM_MOD_INDIRECT:
-      operand->mode = OPERAND_MODE_INDIRECT;
-      operand->immediate16 = 0;
-      // Special case on 16-bit platforms.
-      if (mrrm.rm_byte == 0x06) {
-        operand->mode = OPERAND_MODE_DIRECT;
-        operand->disp16 = (i16)(buffer[2] + (buffer[3] << 8));
+int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer_size,
+                       unsigned data_offset, struct operand *result) {
+  result->size = size;
+  u8 mod_rm_byte = buffer[1];
+
+  enum mrrm_mod mod = decode_mrrm_mod(mod_rm_byte);
+
+  switch (mod) {
+    case MRRM_MOD_INDIRECT: {
+      enum indirect_encoding indirect_encoding = mod_rm_byte & 0x07;
+      if (indirect_encoding == IE_BP) {
+        result->type = OT_DIRECT;
+        result->as_direct.address = read_u16(buffer + data_offset, buffer_size - data_offset);
         return 2;
       } else {
-        // Indirect memory address register is always a 16-bit register.
-        operand->reg_16 = mrrm_rm_to_register_16(mrrm.rm_rm);
+        result->type = OT_INDIRECT;
+        result->as_indirect.encoding = indirect_encoding;
         return 0;
       }
+    }
 
-    case MRRM_MOD_BYTE:
-      operand->mode = OPERAND_MODE_DISPLACEMENT_8;
-      operand->reg_16 = mrrm_rm_to_register_16(mrrm.rm_rm);
-      operand->disp8 = (i8)buffer[2];
+    case MRRM_MOD_BYTE: {
+      result->type = OT_DISPLACEMENT;
+      result->as_indirect.encoding = mod_rm_byte & 0x07;
+      result->as_displacement.displacement =
+          (i16)read_i8(buffer + data_offset, buffer_size - data_offset);
       return 1;
+    }
 
-    case MRRM_MOD_DOUBLE_WORD:
-      operand->mode = OPERAND_MODE_DISPLACEMENT_16;
-      operand->reg_16 = mrrm_rm_to_register_16(mrrm.rm_rm);
-      operand->disp16 = (i16)(buffer[2] + (buffer[3] << 8));
+    case MRRM_MOD_DOUBLE_WORD: {
+      result->type = OT_DISPLACEMENT;
+      result->as_indirect.encoding = mod_rm_byte & 0x07;
+      result->as_displacement.displacement =
+          read_i16(buffer + data_offset, buffer_size - data_offset);
       return 2;
+    }
 
-    case MRRM_MOD_REGISTER:
-      operand->mode = OPERAND_MODE_REGISTER;
-      operand->immediate16 = 0;
-      switch (operand_size) {
-        case OPERAND_SIZE_8:
-          operand->reg_8 = mrrm_reg_to_register_8(mrrm.rm_reg);
-          break;
+    case MRRM_MOD_REGISTER: {
+      result->type = OT_REGISTER;
+      switch (size) {
+        case OS_8:
+          result->as_register.reg_8 = encoding_to_register_8(decode_mrrm_reg_from_rm(mod_rm_byte));
+          return 0;
 
-        case OPERAND_SIZE_16:
-          operand->reg_16 = mrrm_reg_to_register_16(mrrm.rm_reg);
-          break;
+        case OS_16:
+          result->as_register.reg_16 =
+              encoding_to_register_16(decode_mrrm_reg_from_rm(mod_rm_byte));
+          return 0;
 
         default:
-          assert(0);
+          break;
       }
+    }
+
+    default:
+      break;
+  }
+
+  assert(0);
+}
+
+int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
+                          unsigned data_offset, struct operand *result) {
+  switch (decode_type) {
+    case DT_REG_AL: {
+      result->type = OT_REGISTER;
+      result->size = OS_8;
+      result->as_register.reg_8 = AL;
+      return 0;
+    }
+
+    case DT_REG_AX: {
+      result->type = OT_REGISTER;
+      result->size = OS_16;
+      result->as_register.reg_16 = AX;
+      return 0;
+    }
+
+    case DT_IMM_8: {
+      result->type = OT_IMMEDIATE;
+      result->size = OS_8;
+      result->as_immediate.immediate_8 = read_u8(buffer + data_offset, buffer_size - data_offset);
+      return 1;
+    }
+
+    case DT_IMM_16: {
+      result->type = OT_IMMEDIATE;
+      result->size = OS_16;
+      result->as_immediate.immediate_16 = read_u16(buffer + data_offset, buffer_size - data_offset);
+      return 2;
+    }
+
+    case DT_JMP_8: {
+      result->type = OT_JUMP;
+      result->size = OS_8;
+      result->as_jump.offset = (i16)read_i8(buffer + data_offset, buffer_size - data_offset);
+      return 1;
+    }
+
+    case DT_JMP_16: {
+      result->type = OT_JUMP;
+      result->size = OS_16;
+      result->as_jump.offset = read_i16(buffer + data_offset, buffer_size - data_offset);
+      return 2;
+    }
+
+    case DT_NONE:
+      result->type = OT_NONE;
       return 0;
 
     default:
       assert(0);
   }
-
-  return -1;
 }
 
-static int decode_immediate_operand(struct mrrm mrrm, enum operand_size operand_size,
-                                    const u8 *buffer, struct operand *operand) {
-  operand->mode = OPERAND_MODE_IMMEDIATE;
-  operand->size = operand_size;
+int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
+                   unsigned data_offset, struct operand *result) {
+  switch (decode_type) {
+    case DT_DST_8: {
+      result->type = OT_REGISTER;
+      result->size = OS_8;
+      result->as_register.reg_8 = encoding_to_register_8(buffer[0] & 0x07);
+      return 0;
+    }
 
-  switch (operand_size) {
-    case OPERAND_SIZE_8:
-      // operand->reg_8 = mrrm_rm_to_register_8(mrrm.rm);
-      operand->immediate8 = buffer[2];
-      return 1;
+    case DT_DST_16: {
+      result->type = OT_REGISTER;
+      result->size = OS_16;
+      result->as_register.reg_16 = encoding_to_register_16(buffer[0] & 0x07);
+      return 0;
+    }
 
-    case OPERAND_SIZE_16:
-      // operand->reg_16 = mrrm_rm_to_register_16(mrrm.rm);
-      operand->immediate16 = buffer[2] + (buffer[3] << 8);
-      return 2;
+    case DT_SEG_REG: { // Duplicated
+      result->type = OT_SEGMENT_REGISTER;
+      result->size = 16;
+      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] & 0x07);
+      return 0;
+    }
 
     default:
-      assert(0);
+      return decode_operand_common(decode_type, buffer, buffer_size, data_offset, result);
   }
-
-  return -1;
 }
 
-static int decode_segment_register_operand(struct mrrm mrrm, const u8 *buffer,
-                                           struct operand *operand) {
-  (void)buffer;
+int decode_operand_with_mod_rm(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
+                               unsigned data_offset, struct operand *result) {
+  u8 mod_rm_byte = buffer[1];
 
-  operand->mode = OPERAND_MODE_SEGMENT_REGISTER;
-  operand->size = OPERAND_SIZE_16;
-  operand->segment_reg = (enum segment_register_encoding)mrrm.reg;
+  switch (decode_type) {
+    case DT_REG_8: {
+      result->type = OT_REGISTER;
+      result->size = OS_8;
+      result->as_register.reg_8 = encoding_to_register_8(mod_rm_byte >> 3 & 0x07);
+      return 0;
+    }
 
-  return 0;
-}
+    case DT_REG_16: {
+      result->type = OT_REGISTER;
+      result->size = OS_16;
+      result->as_register.reg_16 = encoding_to_register_16(mod_rm_byte >> 3 & 0x07);
+      return 0;
+    }
 
-static int decode_operand(enum operand_type type, struct mrrm mrrm, const u8 *buffer,
-                          struct operand *operand) {
-  switch (type) {
-    case MEM_8:
-      return decode_mem_operand(mrrm, OPERAND_SIZE_8, buffer, operand);
+    case DT_MEM_8: {
+      return decode_mem_operand(OS_8, buffer, buffer_size, data_offset, result);
+    }
 
-    case MEM_16:
-      return decode_mem_operand(mrrm, OPERAND_SIZE_16, buffer, operand);
+    case DT_MEM_16: {
+      return decode_mem_operand(OS_16, buffer, buffer_size, data_offset, result);
+    }
 
-    case REG_8:
-      return decode_reg_operand(OPERAND_SIZE_8, buffer, operand);
-
-    case REG_16:
-      return decode_reg_operand(OPERAND_SIZE_16, buffer, operand);
-
-    case IMM_8:
-      return decode_immediate_operand(mrrm, OPERAND_SIZE_8, buffer, operand);
-
-    case IMM_16:
-      return decode_immediate_operand(mrrm, OPERAND_SIZE_16, buffer, operand);
-
-    case REG_SEG:
-      return decode_segment_register_operand(mrrm, buffer, operand);
-
-    case OPERAND_NONE:
-      break;
+    case DT_SEG_REG: { // Duplicated
+      result->type = OT_SEGMENT_REGISTER;
+      result->size = 16;
+      result->as_segment_register.reg = encoding_to_segment_register(buffer[1] >> 3 & 0x07);
+      return 0;
+    }
 
     default:
-      assert(0);
+      return decode_operand_common(decode_type, buffer, buffer_size, data_offset, result);
   }
-
-  return -1;
-}
-
-int decode_instruction_with_mod_rm(struct op_code_mapping *mapping, const u8 *buffer,
-                                   unsigned buffer_size, struct instruction *instruction) {
-  (void)buffer_size;
-
-  struct mrrm mrrm = decode_mrrm(buffer[1]);
-
-  instruction->type = mapping->instruction_type;
-
-  // op_code + mod_rm
-  int instruction_size = 2;
-
-  instruction_size +=
-      decode_operand(mapping->destination_operand_type, mrrm, buffer, &instruction->destination);
-  instruction_size +=
-      decode_operand(mapping->source_operand_type, mrrm, buffer, &instruction->source);
-
-  return instruction_size;
-}
-
-int decode_instruction_skip(struct op_code_mapping *mapping, const u8 *buffer, unsigned buffer_size,
-                            struct instruction *instruction) {
-  (void)mapping;
-  (void)buffer;
-  (void)buffer_size;
-
-  instruction->type = NOP;
-
-  return 1;
 }
 
 int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instruction *instruction) {
   assert(buffer_size > 0);
 
-  int instruction_size = 0;
-
+  unsigned data_offset = 1;
   u8 op_code = buffer[0];
 
-  // If the `op_code` equals one of the prefix codes, then we advance the buffer by one and call
-  // the `decode_instruction` function again, leaving the current instruction state in tact.  Then
-  // We return the instruction size of that call + 1 for the prefix byte we processed.
-  for (unsigned i = 0; i < sizeof(prefix_func_table) / sizeof(struct prefix_func_table); ++i) {
-    if (op_code == prefix_func_table[i].prefix_code) {
-      prefix_func_table[i].func(op_code, instruction);
-      return 1 + decode_instruction(buffer + 1, buffer_size - 1, instruction);
+  instruction->segment_register = DS;
+  if (op_code == 0x2e || op_code == 0x26 || op_code == 0x3e || op_code == 0x36) {
+    switch (op_code) {
+      case 0x2e:
+        instruction->segment_register = CS;
+        break;
+
+      case 0x26:
+        instruction->segment_register = ES;
+        break;
+
+      case 0x3e:
+        instruction->segment_register = DS;
+        break;
+
+      case 0x36:
+        instruction->segment_register = SS;
+        break;
     }
+
+    buffer++;
+    buffer_size--;
+    data_offset++;
+    op_code = buffer[0];
   }
 
   struct op_code_mapping *mapping = &op_code_table[op_code];
 
-  //  if (mapping->instruction_type == NOP) {
-  //    return -1;
-  //  }
+  instruction->type = mapping->instruction_type;
 
-  if (mapping->decoder_func != 0) {
-    return instruction_size + mapping->decoder_func(mapping, buffer, buffer_size, instruction);
+
+  if (mapping->flags & DF_HAS_MOD_RM) {
+    data_offset++;
+    data_offset += decode_operand_with_mod_rm(mapping->destination_type, buffer, buffer_size,
+                                              data_offset, &instruction->destination);
+    data_offset += decode_operand_with_mod_rm(mapping->source_type, buffer, buffer_size,
+                                              data_offset, &instruction->source);
+    data_offset += decode_operand_with_mod_rm(mapping->third_type, buffer, buffer_size, data_offset,
+                                              &instruction->third);
   } else {
-    return -2;
+    data_offset += decode_operand(mapping->destination_type, buffer, buffer_size, data_offset,
+                                  &instruction->destination);
+    data_offset += decode_operand(mapping->source_type, buffer, buffer_size, data_offset,
+                                  &instruction->source);
+    data_offset +=
+        decode_operand(mapping->third_type, buffer, buffer_size, data_offset, &instruction->third);
   }
+
+  return data_offset;
 }

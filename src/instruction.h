@@ -1,58 +1,86 @@
 #ifndef INSTRUCTION_H_
 #define INSTRUCTION_H_
 
-#include "decoder/mod_reg_rm.h"
 #include "platform.h"
 #include "registers.h"
 
 #include <string.h>
 
+enum operand_type {
+  OT_DISPLACEMENT,
+  OT_INDIRECT,
+  OT_DIRECT,
+  OT_REGISTER,
+  OT_IMMEDIATE,
+  OT_JUMP,
+  OT_SEGMENT_REGISTER,
+
+  OT_NONE,
+};
+
 enum operand_size {
-  OPERAND_SIZE_8 = 0x00,
-  OPERAND_SIZE_16 = 0x01,
+  OS_8,
+  OS_16,
 };
 
-enum operand_mode {
-  // MOD bits on modR/M
-  OPERAND_MODE_INDIRECT,        // 0b00
-  OPERAND_MODE_DISPLACEMENT_8,  // 0b01
-  OPERAND_MODE_DISPLACEMENT_16, // 0b10
-  OPERAND_MODE_REGISTER,        // 0b11
-
-  // Special when MOD == INDIRECT and R/M == 0b101.
-  OPERAND_MODE_DIRECT,
-
-  // When an immediate value was passed.
-  OPERAND_MODE_IMMEDIATE,
-
-  // Points to a segment register.
-  OPERAND_MODE_SEGMENT_REGISTER,
-
-  OPERAND_MODE_NONE = 0xff,
+enum indirect_encoding {
+  IE_BX_SI,
+  IE_BX_DI,
+  IE_BP_SI,
+  IE_BP_DI,
+  IE_SI,
+  IE_DI,
+  IE_BP,
+  IE_BX,
 };
 
-enum segment_register_encoding {
-  SEG_REG_ES, // 0b00
-  SEG_REG_CS, // 0b01
-  SEG_REG_SS, // 0b10
-  SEG_REG_DS, // 0b11
+struct operand_displacement {
+  enum indirect_encoding encoding;
+  i16 displacement;
+};
+
+struct operand_indirect {
+  enum indirect_encoding encoding;
+};
+
+struct operand_direct {
+  u16 address;
+};
+
+struct operand_register {
+  union {
+    enum register_8 reg_8;
+    enum register_16 reg_16;
+  };
+};
+
+struct operand_immediate {
+  union {
+    u8 immediate_8;
+    u16 immediate_16;
+  };
+};
+
+struct operand_jump {
+  i16 offset;
+};
+
+struct operand_segment_register {
+  enum segment_register reg;
 };
 
 struct operand {
-  enum operand_mode mode;
+  enum operand_type type;
   enum operand_size size;
+
   union {
-    union {
-      enum register_8 reg_8;
-      enum register_16 reg_16;
-    };
-    enum segment_register_encoding segment_reg;
-  };
-  union {
-    i8 disp8;
-    i16 disp16;
-    u8 immediate8;
-    u16 immediate16;
+    struct operand_displacement as_displacement;
+    struct operand_indirect as_indirect;
+    struct operand_direct as_direct;
+    struct operand_register as_register;
+    struct operand_immediate as_immediate;
+    struct operand_jump as_jump;
+    struct operand_segment_register as_segment_register;
   };
 };
 
@@ -162,6 +190,7 @@ struct instruction {
   enum segment_register segment_register;
   struct operand destination;
   struct operand source;
+  struct operand third;
 };
 
 #endif // INSTRUCTION_H_

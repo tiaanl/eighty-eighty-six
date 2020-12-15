@@ -3,27 +3,33 @@
 
 #include "../instruction.h"
 
-enum operand_type {
-  OPERAND_NONE,
-  REG_AL,
-  REG_AX,
-  REG_SEG,
-  MEM_8,
-  MEM_16,
-  REG_8,
-  REG_16,
-  IMM_8,
-  IMM_16,
-  JMP_8,
-  JMP_16,
+enum decode_type {
+  DT_NONE,
+  DT_REG_AL,
+  DT_REG_AX,
+  DT_REG_8,
+  DT_REG_16,
+  DT_DST_8,
+  DT_DST_16,
+  DT_MEM_8,
+  DT_MEM_16,
+  DT_IMM_8,
+  DT_IMM_16,
+  DT_JMP_8,
+  DT_JMP_16,
+  DT_SEG_REG,
+};
+
+enum decode_flags {
+  DF_HAS_MOD_RM = 0x01,
 };
 
 struct op_code_mapping {
   enum instruction_type instruction_type;
-  enum operand_type destination_operand_type;
-  enum operand_type source_operand_type;
-  enum operand_type third;
-  int (*decoder_func)(struct op_code_mapping *, const u8 *, unsigned, struct instruction *);
+  enum decode_type destination_type;
+  enum decode_type source_type;
+  enum decode_type third_type;
+  u8 flags;
 };
 
 extern struct op_code_mapping op_code_table[];
