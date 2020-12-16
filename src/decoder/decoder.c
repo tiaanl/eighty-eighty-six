@@ -1,11 +1,20 @@
 #include "decoder.h"
 
+#include "../print_format.h"
 #include "mod_reg_rm.h"
 #include "op_code_table.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 typedef void (*prefix_func)(u8, struct instruction *);
+
+static void dump_buffer(const u8 *buffer, unsigned buffer_size) {
+  for (unsigned i = 0; i < buffer_size; ++i) {
+    printf(HEX_8 " ", buffer[i]);
+  }
+  printf("\n");
+}
 
 void prefix_segment_override(u8 prefix, struct instruction *instruction) {
   switch (prefix) {
@@ -133,20 +142,6 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
 int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
                           unsigned data_offset, struct operand *result) {
   switch (decode_type) {
-    case DT_REG_AL: {
-      result->type = OT_REGISTER;
-      result->size = OS_8;
-      result->as_register.reg_8 = AL;
-      return 0;
-    }
-
-    case DT_REG_AX: {
-      result->type = OT_REGISTER;
-      result->size = OS_16;
-      result->as_register.reg_16 = AX;
-      return 0;
-    }
-
     case DT_IMM_8: {
       result->type = OT_IMMEDIATE;
       result->size = OS_8;
@@ -180,6 +175,8 @@ int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsign
       return 0;
 
     default:
+      printf("Invalid operand decode type\n");
+      dump_buffer(buffer, buffer_size);
       assert(0);
   }
 }
@@ -187,21 +184,35 @@ int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsign
 int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
                    unsigned data_offset, struct operand *result) {
   switch (decode_type) {
-    case DT_DST_8: {
+    case DT_OP_CODE_REG_8: {
       result->type = OT_REGISTER;
       result->size = OS_8;
       result->as_register.reg_8 = encoding_to_register_8(buffer[0] & 0x07);
       return 0;
     }
 
-    case DT_DST_16: {
+    case DT_OP_CODE_REG_16: {
       result->type = OT_REGISTER;
       result->size = OS_16;
       result->as_register.reg_16 = encoding_to_register_16(buffer[0] & 0x07);
       return 0;
     }
 
-    case DT_SEG_REG: { // Duplicated
+    case DT_AL: {
+      result->type = OT_REGISTER;
+      result->size = OS_8;
+      result->as_register.reg_8 = AL;
+      return 0;
+    }
+
+    case DT_AX: {
+      result->type = OT_REGISTER;
+      result->size = OS_16;
+      result->as_register.reg_16 = AX;
+      return 0;
+    }
+
+    case DT_SEGMENT_REG: { // Duplicated
       result->type = OT_SEGMENT_REGISTER;
       result->size = 16;
       result->as_segment_register.reg = encoding_to_segment_register(buffer[0] & 0x07);
@@ -218,32 +229,32 @@ int decode_operand_with_mod_rm(enum decode_type decode_type, const u8 *buffer, u
   u8 mod_rm_byte = buffer[1];
 
   switch (decode_type) {
-    case DT_REG_8: {
+    case DT_MOD_RM_REG_8: {
       result->type = OT_REGISTER;
       result->size = OS_8;
       result->as_register.reg_8 = encoding_to_register_8(mod_rm_byte >> 3 & 0x07);
       return 0;
     }
 
-    case DT_REG_16: {
+    case DT_MOD_RM_REG_16: {
       result->type = OT_REGISTER;
       result->size = OS_16;
       result->as_register.reg_16 = encoding_to_register_16(mod_rm_byte >> 3 & 0x07);
       return 0;
     }
 
-    case DT_MEM_8: {
+    case DT_MOD_RM_RM_8: {
       return decode_mem_operand(OS_8, buffer, buffer_size, data_offset, result);
     }
 
-    case DT_MEM_16: {
+    case DT_MOD_RM_RM_16: {
       return decode_mem_operand(OS_16, buffer, buffer_size, data_offset, result);
     }
 
-    case DT_SEG_REG: { // Duplicated
+    case DT_SEGMENT_REG: { // Duplicated
       result->type = OT_SEGMENT_REGISTER;
       result->size = 16;
-      result->as_segment_register.reg = encoding_to_segment_register(buffer[1] >> 3 & 0x07);
+      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] & 0x07);
       return 0;
     }
 
@@ -288,7 +299,6 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
 
   instruction->type = mapping->instruction_type;
 
-
   if (mapping->flags & DF_HAS_MOD_RM) {
     data_offset++;
     data_offset += decode_operand_with_mod_rm(mapping->destination_type, buffer, buffer_size,
@@ -305,6 +315,7 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
     data_offset +=
         decode_operand(mapping->third_type, buffer, buffer_size, data_offset, &instruction->third);
   }
-
   return data_offset;
+
+  return -1;
 }

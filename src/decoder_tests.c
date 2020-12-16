@@ -16,6 +16,18 @@ ASSERT_OPERAND_INDIRECT(16)
 
 #undef ASSERT_OPERAND_INDIRECT
 
+#define ASSERT_OPERAND_DIRECT(Size)                                                                \
+  void assert_operand_direct_##Size(struct operand *operand, u16 address) {                        \
+    assert(operand->type == OT_DIRECT);                                                            \
+    assert(operand->size == OS_##Size);                                                            \
+    assert(operand->as_direct.address == address);                                                 \
+  }
+
+ASSERT_OPERAND_DIRECT(8)
+ASSERT_OPERAND_DIRECT(16)
+
+#undef ASSERT_OPERAND_DIRECT
+
 #define ASSERT_OPERAND_REG(Size)                                                                   \
   void assert_operand_reg_##Size(struct operand *operand, enum register_##Size reg) {              \
     assert(operand->type == OT_REGISTER);                                                          \
@@ -44,17 +56,29 @@ void assert_operand_none(struct operand *operand) {
   assert(operand->type == OT_NONE);
 }
 
-#define ASSERT_OPERAND_JUMP_DISPLACEMENT(SIZE)                                                     \
-  void assert_operand_jump_displacement_##SIZE(struct operand *operand, i16 displacement) {    \
+#define ASSERT_OPERAND_DISPLACEMENT(SIZE)                                                          \
+  void assert_operand_displacement_##SIZE(struct operand *operand, i16 displacement) {             \
     assert(operand->type == OT_DISPLACEMENT);                                                      \
     assert(operand->size == OS_##SIZE);                                                            \
     assert(operand->as_displacement.displacement == displacement);                                 \
   }
 
-ASSERT_OPERAND_JUMP_DISPLACEMENT(8)
-ASSERT_OPERAND_JUMP_DISPLACEMENT(16)
+ASSERT_OPERAND_DISPLACEMENT(8)
+ASSERT_OPERAND_DISPLACEMENT(16)
 
-#undef ASSERT_OPERAND_JUMP_DISPLACEMENT
+#undef ASSERT_OPERAND_DISPLACEMENT
+
+#define ASSERT_JUMP_OFFSET(Size)                                                                   \
+  void assert_operand_jump_offset_##Size(struct operand *operand, i##Size offset) {                \
+    assert(operand->type == OT_JUMP);                                                              \
+    assert(operand->size == OS_##Size);                                                            \
+    assert(operand->as_jump.offset == offset);                                                     \
+  }
+
+ASSERT_JUMP_OFFSET(8)
+ASSERT_JUMP_OFFSET(16)
+
+#undef ASSERT_JUMP_OFFSET
 
 void test_00(void) {
   // add [di], bl
@@ -64,7 +88,7 @@ void test_00(void) {
   struct instruction i = {0};
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
-  assert_operand_indirect_8(&i.destination, DI);
+  assert_operand_indirect_8(&i.destination, IE_BP_DI);
   assert_operand_reg_8(&i.source, BL);
 }
 
@@ -75,7 +99,7 @@ void test_01(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
-  assert_operand_indirect_16(&i.destination, DI);
+  assert_operand_indirect_16(&i.destination, IE_DI);
   assert_operand_reg_16(&i.source, BX);
 }
 
@@ -87,7 +111,7 @@ void test_02(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, DI);
+  assert_operand_indirect_8(&i.source, IE_DI);
 }
 
 void test_03(void) {
@@ -98,7 +122,7 @@ void test_03(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
   assert_operand_reg_16(&i.destination, BX);
-  assert_operand_indirect_16(&i.source, DI);
+  assert_operand_indirect_16(&i.source, IE_DI);
 }
 
 void test_04(void) {
@@ -114,13 +138,13 @@ void test_04(void) {
 
 void test_05(void) {
   // add ax, 0xffee
-  const u8 buffer[] = {0x03, 0x1d};
+  const u8 buffer[] = {0x05, 0xee, 0xff};
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
+  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
   assert(i.type == ADD);
-  assert_operand_reg_16(&i.destination, BX);
-  assert_operand_indirect_16(&i.source, DI);
+  assert_operand_reg_16(&i.destination, AX);
+  assert_operand_immediate_16(&i.source, 0xffee);
 }
 
 void test_40(void) {
@@ -219,7 +243,7 @@ void test_74(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == JZ);
-  assert_operand_jump_displacement_8(&i.destination, -2);
+  assert_operand_jump_offset_8(&i.destination, -2);
   assert_operand_none(&i.source);
 }
 
@@ -256,7 +280,7 @@ void test_88(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
-  assert_operand_indirect_8(&i.destination, DI);
+  assert_operand_indirect_8(&i.destination, IE_DI);
   assert_operand_reg_8(&i.source, AL);
 }
 
@@ -267,7 +291,7 @@ void test_89(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
-  assert_operand_indirect_16(&i.destination, DI);
+  assert_operand_indirect_16(&i.destination, IE_DI);
   assert_operand_reg_16(&i.source, AX);
 }
 
@@ -279,7 +303,7 @@ void test_8a(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, DI);
+  assert_operand_indirect_8(&i.source, IE_DI);
 }
 
 void test_8b(void) {
@@ -290,7 +314,7 @@ void test_8b(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, CX);
-  assert_operand_indirect_16(&i.source, DI);
+  assert_operand_indirect_16(&i.source, IE_DI);
 }
 
 void test_b0(void) {
@@ -476,7 +500,7 @@ void test_e2(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == LOOP);
-  assert_operand_jump_displacement_8(&i.destination, -4);
+  assert_operand_jump_offset_8(&i.destination, -4);
   assert_operand_none(&i.source);
 }
 
