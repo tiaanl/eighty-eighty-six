@@ -9,9 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
-
-
 const char *register_8_to_string(enum register_8 reg) {
   static const char *mapping[] = {
       "al", "ah", "bl", "bh", "cl", "ch", "dl", "dh",
@@ -471,7 +468,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       interpret_mov(cpu, instruction);
       break;
 
-    case NOP:
+    case NOOP:
       break;
 
     case TEST:
@@ -501,6 +498,20 @@ void cpu_init(struct cpu *cpu, struct bus *bus) {
   cpu->bus = bus;
 }
 
+void hex_dump(const u8 *data, unsigned data_size) {
+  for (unsigned i = 0; i < data_size; ++i) {
+    printf("%02x", data[i]);
+    unsigned mod = i % 0x10;
+    if (mod == 0x0f) {
+      printf("\n");
+    } else if (mod == 0x07) {
+      printf("  ");
+    } else {
+      printf(" ");
+    }
+  }
+}
+
 void cpu_run(struct cpu *cpu) {
   // print_registers(cpu->registers);
 
@@ -509,9 +520,23 @@ void cpu_run(struct cpu *cpu) {
     memset(buffer, 0, sizeof(buffer));
     unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
 
+    unsigned ppp = buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5] +
+                   buffer[6] + buffer[7];
+    if (ppp == 0) {
+      break;
+    }
+
+    // hex_dump(buffer, 16);
+
     struct instruction instruction;
     memset(&instruction, 0, sizeof(struct instruction));
+
+#if !defined(NDEBUG)
+    memcpy(instruction.buffer, buffer, sizeof(buffer));
+#endif
+
     int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
+    instruction.instruction_size = instruction_size;
 
     if (instruction_size < 0) {
       printf("Could not decode instructions [");
@@ -526,7 +551,7 @@ void cpu_run(struct cpu *cpu) {
     }
 
     u16 ip = cpu->ip;
-    disassemble_addr(&instruction, ip);
+    disassemble(&instruction, ip);
 
     cpu->ip += instruction_size;
 

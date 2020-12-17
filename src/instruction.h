@@ -85,6 +85,9 @@ struct operand {
 };
 
 enum instruction_type {
+  INVALID,
+  NOOP,
+
   AAA,
   AAD,
   AAM,
@@ -146,7 +149,6 @@ enum instruction_type {
   LOOPE,
   LOOPNE,
   MOV,
-  NOP,
   OR,
   OUT,
   POP,
@@ -191,6 +193,11 @@ struct instruction {
   struct operand destination;
   struct operand source;
   struct operand third;
+
+#if !defined(NDEBUG)
+  u8 buffer[16];
+  u8 instruction_size;
+#endif
 };
 
 #endif // INSTRUCTION_H_

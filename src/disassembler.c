@@ -18,20 +18,16 @@ const char *indirect_encoding_to_string(enum indirect_encoding encoding) {
 
 void print_mnemonic(const struct instruction *instruction) {
   static const char *mnemonics[] = {
-      "aaa",       "aad",       "aam",       "aas",       "adc",       "add",       "and",
-      "arpl",      "bound",     "call",      "callf",     "cbw",       "clc",       "cld",
-      "cli",       "cmc",       "cmp",       "cwd",       "daa",       "das",       "dec",
-      "enter",     "fwait",     "hlt",       "imul",      "in",        "inc",       "int",
-      "int 1",     "int 3",     "into",      "iret",      "jae",       "jb",        "jbe",
-      "jcxz",      "jl",        "jle",       "jmp",       "jmpf",      "jnb",       "jnbe",
-      "jnl",       "jnle",      "jno",       "jnp",       "jns",       "jnz",       "jo",
-      "jp",        "js",        "jz",        "lahf",      "lds",       "lea",       "leave",
-      "les",       "loop",      "loope",     "loopne",    "mov",       "nop",       "or",
-      "out",       "pop",       "popa",      "popf",      "push",      "pusha",     "pushf",
-      "rep cmpsb", "rep cmpsw", "rep insb",  "rep insw",  "rep lodsb", "rep lodsw", "rep movsb",
-      "rep movsw", "rep outsb", "rep outsw", "rep scasb", "rep scasw", "rep stosb", "rep stosw",
-      "ret",       "retf",      "sahf",      "salc",      "sar",       "sbb",       "stc",
-      "std",       "sti",       "sub",       "test",      "xchg",      "xlat",      "xor",
+      "<invalid>", "<noop>", "aaa",   "aad",   "aam",   "aas",   "adc",   "add",   "and",   "arpl",
+      "bound",     "call",   "callf", "cbw",   "clc",   "cld",   "cli",   "cmc",   "cmp",   "cwd",
+      "daa",       "das",    "dec",   "enter", "fwait", "hlt",   "imul",  "in",    "inc",   "int",
+      "int1",      "int3",   "into",  "iret",  "jae",   "jb",    "jbe",   "jcxz",  "jl",    "jle",
+      "jmp",       "jmpf",   "jnb",   "jnbe",  "jnl",   "jnle",  "jno",   "jnp",   "jns",   "jnz",
+      "jo",        "jp",     "js",    "jz",    "lahf",  "lds",   "lea",   "leave", "les",   "loop",
+      "loope",     "loopne", "mov",   "or",    "out",   "pop",   "popa",  "popf",  "push",  "pusha",
+      "pushf",     "cmpsb",  "cmpsw", "insb",  "insw",  "lodsb", "lodsw", "movsb", "movsw", "outsb",
+      "outsw",     "scasb",  "scasw", "stosb", "stosw", "ret",   "retf",  "sahf",  "salc",  "sar",
+      "sbb",       "stc",    "std",   "sti",   "sub",   "test",  "xchg",  "xlat",  "xor",
   };
 
   printf(MNEMONIC, mnemonics[instruction->type]);
@@ -105,7 +101,25 @@ void print_operand(const struct operand *operand, enum segment_register segment_
   }
 }
 
-void disassemble(const struct instruction *instruction) {
+#if !defined(NDEBUG)
+void print_buffer(const struct instruction *instruction) {
+  unsigned i = 0;
+  for (; i < instruction->instruction_size; ++i) {
+    printf("%02x ", instruction->buffer[i]);
+  }
+  for (; i < 16; ++i) {
+    printf("   ");
+  }
+}
+#endif
+
+void disassemble(const struct instruction *instruction, u16 addr) {
+  printf(HEX_16 "  ", addr);
+
+#if !defined(NDEBUG)
+  print_buffer(instruction);
+#endif
+
   print_mnemonic(instruction);
 
   print_operand(&instruction->destination, instruction->segment_register);
@@ -117,9 +131,4 @@ void disassemble(const struct instruction *instruction) {
   print_operand(&instruction->source, instruction->segment_register);
 
   printf("\n");
-}
-
-void disassemble_addr(const struct instruction *instruction, u16 addr) {
-  printf(HEX_16 "  ", addr);
-  disassemble(instruction);
 }

@@ -3,7 +3,13 @@
     ;inc cx
     ;inc bx
 
-    mov cs, ax
+    ;mov cs, ax
+    ;jmp 0xACDC:0x5578
+    ;mov [cs:0x5578], ax
+    repe stosb
+
+    ;mov ax, [cs:0x000f]
+
 
 ;main:
 ;    mov si, data

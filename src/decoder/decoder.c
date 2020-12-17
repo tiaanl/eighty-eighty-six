@@ -212,10 +212,17 @@ int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buff
       return 0;
     }
 
+    case DT_DX: {
+      result->type = OT_REGISTER;
+      result->size = OS_16;
+      result->as_register.reg_16 = DX;
+      return 0;
+    }
+
     case DT_SEGMENT_REG: { // Duplicated
       result->type = OT_SEGMENT_REGISTER;
       result->size = 16;
-      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] & 0x07);
+      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] >> 3 & 0x07);
       return 0;
     }
 
@@ -254,7 +261,7 @@ int decode_operand_with_mod_rm(enum decode_type decode_type, const u8 *buffer, u
     case DT_SEGMENT_REG: { // Duplicated
       result->type = OT_SEGMENT_REGISTER;
       result->size = 16;
-      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] & 0x07);
+      result->as_segment_register.reg = encoding_to_segment_register(buffer[1] >> 3 & 0x07);
       return 0;
     }
 
@@ -291,7 +298,7 @@ int decode_instruction(const u8 *buffer, unsigned buffer_size, struct instructio
 
     buffer++;
     buffer_size--;
-    data_offset++;
+    // data_offset++;
     op_code = buffer[0];
   }
 
