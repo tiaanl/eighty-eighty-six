@@ -12,13 +12,14 @@ void bus_destroy(struct bus *bus) {
   // TODO
 }
 
-void bus_add_mapping(struct bus *bus, u16 begin, u16 end, void *obj, bus_fetch_func fetch_func,
-                     bus_store_func store_func) {
+void bus_add_mapping(struct bus *bus, struct address begin, u32 size, void *obj,
+                     bus_fetch_func fetch_func, bus_store_func store_func) {
   // Allocate a new node.
   struct bus_mapping_node *node = malloc(sizeof(struct bus_mapping_node));
 
-  node->begin = begin;
-  node->end = end;
+  u32 flat_begin = flatten_address(begin);
+  node->begin = flat_begin;
+  node->end = flat_begin + size;
   node->obj = obj;
   node->fetch = fetch_func;
   node->store = store_func;
@@ -28,7 +29,7 @@ void bus_add_mapping(struct bus *bus, u16 begin, u16 end, void *obj, bus_fetch_f
 }
 
 static struct bus_mapping_node *get_node(struct bus *bus, struct address address) {
-  u32 flat = flat_address(address);
+  u32 flat = flatten_address(address);
   for (struct bus_mapping_node *current = bus->first_mapping; current; current = current->next) {
     if (flat >= current->begin && flat < current->end) {
       return current;

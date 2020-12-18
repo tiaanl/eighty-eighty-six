@@ -23,6 +23,9 @@ enum decode_type {
   DT_JMP_8,
   DT_JMP_16,
 
+  // Operand has direct memory address, including a segment register, e.g. mov 0xf000:0xfff0
+  DT_SEG_DIRECT,
+
   // Get a segment register encoding from the op code. (00111000)
   DT_SEGMENT_REG,
 

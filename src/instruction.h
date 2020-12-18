@@ -1,6 +1,7 @@
 #ifndef INSTRUCTION_H_
 #define INSTRUCTION_H_
 
+#include "address.h"
 #include "platform.h"
 #include "registers.h"
 
@@ -10,6 +11,7 @@ enum operand_type {
   OT_DISPLACEMENT,
   OT_INDIRECT,
   OT_DIRECT,
+  OT_DIRECT_WITH_SEGMENT,
   OT_REGISTER,
   OT_IMMEDIATE,
   OT_JUMP,
@@ -47,6 +49,10 @@ struct operand_direct {
   u16 address;
 };
 
+struct operand_direct_with_segment {
+  struct address address;
+};
+
 struct operand_register {
   union {
     enum register_8 reg_8;
@@ -77,6 +83,7 @@ struct operand {
     struct operand_displacement as_displacement;
     struct operand_indirect as_indirect;
     struct operand_direct as_direct;
+    struct operand_direct_with_segment as_direct_with_segment;
     struct operand_register as_register;
     struct operand_immediate as_immediate;
     struct operand_jump as_jump;
@@ -127,7 +134,6 @@ enum instruction_type {
   JL,
   JLE,
   JMP,
-  JMPF,
   JNB,
   JNBE,
   JNL,
@@ -199,5 +205,7 @@ struct instruction {
   u8 instruction_size;
 #endif
 };
+
+const char *instruction_type_to_string(enum instruction_type instruction_type);
 
 #endif // INSTRUCTION_H_

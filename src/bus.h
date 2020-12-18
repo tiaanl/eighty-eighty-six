@@ -25,8 +25,8 @@ struct bus {
 void bus_init(struct bus *bus);
 void bus_destroy(struct bus *bus);
 
-void bus_add_mapping(struct bus *bus, u16 begin, u16 end, void *obj, bus_fetch_func fetch_func,
-                     bus_store_func store_func);
+void bus_add_mapping(struct bus *bus, struct address begin, u32 size, void *obj,
+                     bus_fetch_func fetch_func, bus_store_func store_func);
 
 u8 bus_fetch(struct bus *bus, struct address address);
 void bus_store(struct bus *bus, struct address address, u8 value);

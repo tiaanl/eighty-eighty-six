@@ -253,7 +253,7 @@ struct op_code_mapping op_code_table[] = {
     /* e7 Ib AX    */ {OUT,       DT_IMM_8,          DT_AX,             _,         __},
     /* e8 Jw       */ {CALL,      DT_JMP_16,         _,                 _,         __},
     /* e9 Jw       */ {JMP,       DT_JMP_16,         _,                 _,         __},
-    /* ea Ap       */ {JMP,       DT_JMP_16,         DT_JMP_16,         _,         __},            // mov cs:ip
+    /* ea Ap       */ {JMP,       DT_SEG_DIRECT,     _,                 _,         __},            // mov cs:ip
     /* eb Jb       */ {JMP,       DT_JMP_8,          _,                 _,         __},
     /* ec AL DX    */ {IN,        DT_AL,             DT_DX,             _,         __},
     /* ed AX DX    */ {IN,        DT_AX,             DT_DX,             _,         __},

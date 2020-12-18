@@ -8,7 +8,7 @@ struct address {
   u16 offset;
 };
 
-static inline u32 flat_address(struct address address) {
+static inline u32 flatten_address(struct address address) {
   return (address.segment << 4) + address.offset;
 }
 

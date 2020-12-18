@@ -1,5 +1,6 @@
 #include "decoder.h"
 
+#include "../address.h"
 #include "../print_format.h"
 #include "mod_reg_rm.h"
 #include "op_code_table.h"
@@ -223,6 +224,15 @@ int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buff
       result->type = OT_SEGMENT_REGISTER;
       result->size = 16;
       result->as_segment_register.reg = encoding_to_segment_register(buffer[0] >> 3 & 0x07);
+      return 0;
+    }
+
+    case DT_SEG_DIRECT: {
+      result->type = OT_DIRECT_WITH_SEGMENT;
+      result->size = 16;
+      u16 offset = read_u16(buffer + data_offset, buffer_size - data_offset);
+      u16 segment = read_u16(buffer + data_offset + 2, buffer_size - data_offset - 2);
+      result->as_direct_with_segment.address = segment_offset(segment, offset);
       return 0;
     }
 

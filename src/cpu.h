@@ -47,7 +47,24 @@ u16 cpu_get_register_16(struct cpu *cpu, enum register_16 reg);
 void cpu_set_register_16(struct cpu *cpu, enum register_16 reg, u16 value);
 u16 cpu_get_segment(struct cpu *cpu, enum segment_register reg);
 
-u8 cpu_flag_is_set(struct cpu *cpu, enum flags flag);
-void cpu_set_flag(struct cpu *cpu, enum flags flag, u8 value);
+static inline u8 cpu_flag_is_set(struct cpu *cpu, enum flags flag) {
+  return (cpu->flags & flag) == flag;
+}
+
+static inline void cpu_clear_flag(struct cpu *cpu, enum flags flag) {
+  cpu->flags &= ~flag;
+}
+
+static inline void cpu_set_flag(struct cpu *cpu, enum flags flag) {
+  cpu->flags |= flag;
+}
+
+static inline void set_flag_value(struct cpu *cpu, enum flags flag, int value) {
+  if (value) {
+    cpu_set_flag(cpu, flag);
+  } else {
+    cpu_clear_flag(cpu, flag);
+  }
+}
 
 #endif // CPU_H_

@@ -22,6 +22,7 @@ set(SOURCE_FILES
     src/decoder/op_code_table.h
     src/disassembler.c
     src/disassembler.h
+    src/instruction.c
     src/instruction.h
     src/platform.h
     src/print_format.h
