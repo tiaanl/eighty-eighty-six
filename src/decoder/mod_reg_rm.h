@@ -6,38 +6,38 @@
 #include <assert.h>
 
 enum mrrm_mod {
-  MRRM_MOD_INDIRECT,
-  MRRM_MOD_BYTE,
-  MRRM_MOD_DOUBLE_WORD,
-  MRRM_MOD_REGISTER,
+  mrrm_mod_indirect,
+  mrrm_mod_byte,
+  mrrm_mod_word,
+  mrrm_mod_register,
 
-  MRRM_MOD_COUNT
+  mrrm_mod_count
 };
 
 enum mrrm_reg {
-  MRRM_REG_AL_AX,
-  MRRM_REG_CL_CX,
-  MRRM_REG_DL_DX,
-  MRRM_REG_BL_BX,
-  MRRM_REG_AH_SP,
-  MRRM_REG_CH_BP,
-  MRRM_REG_DH_SI,
-  MRRM_REG_BH_DI,
+  mrrm_reg_al_ax,
+  mrrm_reg_cl_cx,
+  mrrm_reg_dl_dx,
+  mrrm_reg_bl_bx,
+  mrrm_reg_ah_sp,
+  mrrm_reg_ch_bp,
+  mrrm_reg_dh_si,
+  mrrm_reg_bh_di,
 
-  MRRM_REG_COUNT,
+  mrrm_reg_count,
 };
 
 enum mrrm_rm {
-  MRRM_RM_BX_SI,
-  MRRM_RM_BX_DI,
-  MRRM_RM_BP_SI,
-  MRRM_RM_BP_DI,
-  MRRM_RM_SI,
-  MRRM_RM_DI,
-  MRRM_RM_BP,
-  MRRM_RM_BX,
+  mrrm_rm_bx_si,
+  mrrm_rm_bx_di,
+  mrrm_rm_bp_si,
+  mrrm_rm_bp_di,
+  mrrm_rm_si,
+  mrrm_rm_di,
+  mrrm_rm_bp,
+  mrrm_rm_bx,
 
-  MRRM_RM_COUNT,
+  mrrm_rm_count,
 };
 
 struct mrrm {
@@ -52,25 +52,25 @@ struct mrrm {
 
 static inline enum mrrm_mod decode_mrrm_mod(u8 byte) {
   enum mrrm_mod result = byte >> 0x06;
-  assert(result < MRRM_MOD_COUNT);
+  assert(result < mrrm_mod_count);
   return result;
 }
 
 static inline enum mrrm_reg decode_mrrm_reg(u8 byte) {
   enum mrrm_reg result = byte >> 0x03 & 0x07;
-  assert(result < MRRM_REG_COUNT);
+  assert(result < mrrm_reg_count);
   return result;
 }
 
 static inline enum mrrm_rm decode_mrrm_rm(u8 byte) {
   enum mrrm_rm result = byte & 0x07;
-  assert(result < MRRM_RM_COUNT);
+  assert(result < mrrm_rm_count);
   return result;
 }
 
 static inline enum mrrm_reg decode_mrrm_reg_from_rm(u8 byte) {
   enum mrrm_reg result = byte & 0x07;
-  assert(result < MRRM_REG_COUNT);
+  assert(result < mrrm_reg_count);
   return result;
 }
 
@@ -80,13 +80,13 @@ static inline struct mrrm decode_mrrm(u8 byte) {
   result.mod = decode_mrrm_mod(byte);
   result.reg = decode_mrrm_reg(byte);
   switch (result.mod) {
-    case MRRM_MOD_INDIRECT:
-    case MRRM_MOD_BYTE:
-    case MRRM_MOD_DOUBLE_WORD:
+    case mrrm_mod_indirect:
+    case mrrm_mod_byte:
+    case mrrm_mod_word:
       result.rm_rm = decode_mrrm_rm(byte);
       break;
 
-    case MRRM_MOD_REGISTER:
+    case mrrm_mod_register:
       result.rm_reg = decode_mrrm_reg_from_rm(byte);
       break;
 

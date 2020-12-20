@@ -8,32 +8,32 @@
 #include <string.h>
 
 enum operand_type {
-  OT_DISPLACEMENT,
-  OT_INDIRECT,
-  OT_DIRECT,
-  OT_DIRECT_WITH_SEGMENT,
-  OT_REGISTER,
-  OT_IMMEDIATE,
-  OT_JUMP,
-  OT_SEGMENT_REGISTER,
+  ot_displacement,
+  ot_indirect,
+  ot_direct,
+  ot_direct_with_segment,
+  ot_register,
+  ot_immediate,
+  ot_jump,
+  ot_segment_register,
 
-  OT_NONE,
+  ot_none,
 };
 
 enum operand_size {
-  OS_8,
-  OS_16,
+  os_8,
+  os_16,
 };
 
 enum indirect_encoding {
-  IE_BX_SI,
-  IE_BX_DI,
-  IE_BP_SI,
-  IE_BP_DI,
-  IE_SI,
-  IE_DI,
-  IE_BP,
-  IE_BX,
+  ie_bx_si,
+  ie_bx_di,
+  ie_bp_si,
+  ie_bp_di,
+  ie_si,
+  ie_di,
+  ie_bp,
+  ie_bx,
 };
 
 struct operand_displacement {

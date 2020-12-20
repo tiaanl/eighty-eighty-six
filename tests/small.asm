@@ -1,12 +1,14 @@
 ; sum of odd numbers in the array.
 
+    ;shr byte [bp], cl
+
     ;inc cx
     ;inc bx
 
     ;mov cs, ax
     ;jmp 0xACDC:0x5578
     ;mov [cs:0x5578], ax
-    repe stosb
+    ; repe stosb
 
     ;mov ax, [cs:0x000f]
 

@@ -4,6 +4,8 @@
 #include "instruction.h"
 #include "platform.h"
 
+#define SIMPLE_CPU
+
 struct bus;
 
 const char *register_8_to_string(enum register_8 reg);
@@ -11,15 +13,15 @@ const char *register_16_to_string(enum register_16 reg);
 const char *segment_register_to_string(enum segment_register reg);
 
 enum flags {
-  FLAG_CF = 0x0001, // Carry
-  FLAG_PF = 0x0004, // Parity
-  FLAG_AF = 0x0010, // Adjust
-  FLAG_ZF = 0x0040, // Zero
-  FLAG_SF = 0x0080, // Sign
-  FLAG_TF = 0x0100, // Trap
-  FLAG_IF = 0x0200, // Interrupt enable
-  FLAG_DF = 0x0400, // Direction
-  FLAG_OF = 0x0800, // Overflow
+  fl_cf = 0x0001, // Carry
+  fl_pf = 0x0004, // Parity
+  fl_af = 0x0010, // Adjust
+  fl_zf = 0x0040, // Zero
+  fl_sf = 0x0080, // Sign
+  fl_tf = 0x0100, // Trap
+  fl_if = 0x0200, // Interrupt enable
+  fl_df = 0x0400, // Direction
+  fl_of = 0x0800, // Overflow
 };
 
 struct cpu {
@@ -59,12 +61,14 @@ static inline void cpu_set_flag(struct cpu *cpu, enum flags flag) {
   cpu->flags |= flag;
 }
 
-static inline void set_flag_value(struct cpu *cpu, enum flags flag, int value) {
+static inline void cpu_set_flag_value(struct cpu *cpu, enum flags flag, int value) {
   if (value) {
     cpu_set_flag(cpu, flag);
   } else {
     cpu_clear_flag(cpu, flag);
   }
 }
+
+void print_registers(struct cpu *cpu);
 
 #endif // CPU_H_

@@ -22,11 +22,11 @@ void print_mnemonic(const struct instruction *instruction) {
 
 void print_immediate(const struct operand *operand) {
   switch (operand->size) {
-    case OS_8:
+    case os_8:
       printf(HEX_8, operand->as_immediate.immediate_8);
       break;
 
-    case OS_16:
+    case os_16:
       printf(HEX_16, operand->as_immediate.immediate_16);
       break;
 
@@ -38,26 +38,26 @@ void print_immediate(const struct operand *operand) {
 
 void print_operand(const struct operand *operand, enum segment_register segment_register) {
   switch (operand->type) {
-    case OT_INDIRECT:
-      if (operand->size == OS_8) {
+    case ot_indirect:
+      if (operand->size == os_8) {
         printf("BYTE ");
-      } else if (operand->size == OS_16) {
+      } else if (operand->size == os_16) {
         printf("WORD ");
       }
       printf("[%s]", indirect_encoding_to_string(operand->as_indirect.encoding));
       break;
 
-    case OT_DISPLACEMENT:
+    case ot_displacement:
       printf("%d", operand->as_displacement.displacement);
       break;
 
-    case OT_REGISTER:
+    case ot_register:
       switch (operand->size) {
-        case OS_8:
+        case os_8:
           printf("%s", register_8_to_string(operand->as_register.reg_8));
           break;
 
-        case OS_16:
+        case os_16:
           printf("%s", register_16_to_string(operand->as_register.reg_16));
           break;
 
@@ -66,29 +66,29 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       }
       break;
 
-    case OT_DIRECT:
+    case ot_direct:
       printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register),
              operand->as_direct.address);
       break;
 
-    case OT_DIRECT_WITH_SEGMENT:
+    case ot_direct_with_segment:
       printf(HEX_16 ":" HEX_16, operand->as_direct_with_segment.address.segment,
              operand->as_direct_with_segment.address.offset);
       break;
 
-    case OT_IMMEDIATE:
+    case ot_immediate:
       print_immediate(operand);
       break;
 
-    case OT_SEGMENT_REGISTER:
+    case ot_segment_register:
       printf("%s", segment_register_to_string(operand->as_segment_register.reg));
       break;
 
-    case OT_JUMP:
+    case ot_jump:
       printf("%d", operand->as_jump.offset);
       break;
 
-    case OT_NONE:
+    case ot_none:
       break;
   }
 }
@@ -116,7 +116,7 @@ void disassemble(const struct instruction *instruction, struct address address) 
 
   print_operand(&instruction->destination, instruction->segment_register);
 
-  if (instruction->source.type != OT_NONE) {
+  if (instruction->source.type != ot_none) {
     printf(", ");
   }
 

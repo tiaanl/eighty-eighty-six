@@ -15,6 +15,8 @@ set(SOURCE_FILES
     src/bus.h
     src/cpu.c
     src/cpu.h
+    src/cpu_decoder.c
+    src/cpu_simple.c
     src/decoder/decoder.c
     src/decoder/decoder.h
     src/decoder/mod_reg_rm.h

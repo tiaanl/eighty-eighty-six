@@ -4,24 +4,24 @@
 enum register_8 {
   AL,
   AH,
-  BL,
-  BH,
   CL,
   CH,
   DL,
   DH,
+  BL,
+  BH,
 
   REGISTER_8_COUNT,
 };
 
 enum register_16 {
   AX,
-  BX,
   CX,
   DX,
+  BX,
 
-  SP,
   BP,
+  SP,
   SI,
   DI,
 

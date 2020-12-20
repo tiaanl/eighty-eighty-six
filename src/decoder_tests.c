@@ -53,7 +53,7 @@ ASSERT_OPERAND_IMMEDIATE(16)
 #undef ASSERT_OPERAND_IMMEDIATE
 
 void assert_operand_none(struct operand *operand) {
-  assert(operand->type == OT_NONE);
+  assert(operand->type == ot_none);
 }
 
 #define ASSERT_OPERAND_DISPLACEMENT(SIZE)                                                          \
@@ -83,12 +83,12 @@ ASSERT_JUMP_OFFSET(16)
 void test_00(void) {
   // add [di], bl
   //  const u8 buffer[] = {0x00, 0x1d};
-  const u8 buffer[] = {0x00, encode_mrrm(MRRM_MOD_INDIRECT, MRRM_REG_BL_BX, MRRM_RM_BP_DI)};
+  const u8 buffer[] = {0x00, encode_mrrm(mrrm_mod_indirect, mrrm_reg_bl_bx, mrrm_rm_bp_di)};
 
   struct instruction i = {0};
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
-  assert_operand_indirect_8(&i.destination, IE_BP_DI);
+  assert_operand_indirect_8(&i.destination, ie_bp_di);
   assert_operand_reg_8(&i.source, BL);
 }
 
@@ -99,7 +99,7 @@ void test_01(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
-  assert_operand_indirect_16(&i.destination, IE_DI);
+  assert_operand_indirect_16(&i.destination, ie_di);
   assert_operand_reg_16(&i.source, BX);
 }
 
@@ -111,7 +111,7 @@ void test_02(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, IE_DI);
+  assert_operand_indirect_8(&i.source, ie_di);
 }
 
 void test_03(void) {
@@ -122,7 +122,7 @@ void test_03(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == ADD);
   assert_operand_reg_16(&i.destination, BX);
-  assert_operand_indirect_16(&i.source, IE_DI);
+  assert_operand_indirect_16(&i.source, ie_di);
 }
 
 void test_04(void) {
@@ -280,7 +280,7 @@ void test_88(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
-  assert_operand_indirect_8(&i.destination, IE_DI);
+  assert_operand_indirect_8(&i.destination, ie_di);
   assert_operand_reg_8(&i.source, AL);
 }
 
@@ -291,7 +291,7 @@ void test_89(void) {
   struct instruction i;
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
-  assert_operand_indirect_16(&i.destination, IE_DI);
+  assert_operand_indirect_16(&i.destination, ie_di);
   assert_operand_reg_16(&i.source, AX);
 }
 
@@ -303,7 +303,7 @@ void test_8a(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, IE_DI);
+  assert_operand_indirect_8(&i.source, ie_di);
 }
 
 void test_8b(void) {
@@ -314,7 +314,7 @@ void test_8b(void) {
   assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
   assert(i.type == MOV);
   assert_operand_reg_16(&i.destination, CX);
-  assert_operand_indirect_16(&i.source, IE_DI);
+  assert_operand_indirect_16(&i.source, ie_di);
 }
 
 void test_b0(void) {

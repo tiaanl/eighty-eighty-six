@@ -1,8 +1,6 @@
 #include "cpu.h"
 
 #include "bus.h"
-#include "decoder/decoder.h"
-#include "disassembler.h"
 #include "print_format.h"
 
 #include <assert.h>
@@ -11,7 +9,7 @@
 
 const char *register_8_to_string(enum register_8 reg) {
   static const char *mapping[] = {
-      "al", "ah", "bl", "bh", "cl", "ch", "dl", "dh",
+      "al", "ah", "cl", "ch", "dl", "dh", "bl", "bh",
   };
 
   assert(reg < REGISTER_8_COUNT);
@@ -20,7 +18,7 @@ const char *register_8_to_string(enum register_8 reg) {
 
 const char *register_16_to_string(enum register_16 reg) {
   static const char *mapping[] = {
-      "ax", "bx", "cx", "dx", "sp", "bp", "si", "di", "ip", "flags",
+      "ax", "bx", "cx", "dx", "bp", "sp", "si", "di",
   };
 
   assert(reg < REGISTER_16_COUNT);
@@ -42,7 +40,7 @@ const char *segment_register_to_string(enum segment_register reg) {
 #define REG_HI(x) ((x) >> 8)
 #define REG_LO(x) ((x)&0xff)
 
-static void print_registers(struct cpu *cpu) {
+void print_registers(struct cpu *cpu) {
   printf("ax: " HEX_16 ", bx: " HEX_16 ", cx: " HEX_16 ", dx: " HEX_16 ", ip: " HEX_16 "\n",
          cpu->reg_16[AX], cpu->reg_16[BX], cpu->reg_16[CX], cpu->reg_16[DX], cpu->ip);
   printf("si: " HEX_16 ", di: " HEX_16 ", bp: " HEX_16 ", sp: " HEX_16 ", fl: " HEX_16 "\n",
@@ -51,15 +49,15 @@ static void print_registers(struct cpu *cpu) {
 
 static void set_flags_sign_zero_8(struct cpu *cpu, u8 value) {
   if (!value) {
-    cpu_set_flag(cpu, FLAG_ZF);
+    cpu_set_flag(cpu, fl_zf);
   } else {
-    cpu_clear_flag(cpu, FLAG_ZF);
+    cpu_clear_flag(cpu, fl_zf);
   }
 
   if (value & 0x80) {
-    cpu_set_flag(cpu, FLAG_SF);
+    cpu_set_flag(cpu, fl_sf);
   } else {
-    cpu_clear_flag(cpu, FLAG_SF);
+    cpu_clear_flag(cpu, fl_sf);
   }
 }
 
@@ -69,21 +67,21 @@ static void set_flags_subtract_8(struct cpu *cpu, u8 destination, u8 source) {
   set_flags_sign_zero_8(cpu, val);
 
   if (val & 0xff00) {
-    cpu_set_flag(cpu, FLAG_CF);
+    cpu_set_flag(cpu, fl_cf);
   } else {
-    cpu_clear_flag(cpu, FLAG_CF);
+    cpu_clear_flag(cpu, fl_cf);
   }
 
   if ((val ^ destination) & (destination ^ source) & 0x80) {
-    cpu_set_flag(cpu, FLAG_OF);
+    cpu_set_flag(cpu, fl_of);
   } else {
-    cpu_clear_flag(cpu, FLAG_OF);
+    cpu_clear_flag(cpu, fl_of);
   }
 
   if ((destination ^ source ^ val) & 0x10) {
-    cpu_set_flag(cpu, FLAG_AF);
+    cpu_set_flag(cpu, fl_af);
   } else {
-    cpu_clear_flag(cpu, FLAG_AF);
+    cpu_clear_flag(cpu, fl_af);
   }
 }
 
@@ -91,35 +89,35 @@ struct address get_operand_indirect_address(struct operand *operand, struct cpu 
   struct address result;
 
   switch (operand->as_indirect.encoding) {
-    case IE_BX_SI:
+    case ie_bx_si:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, SI));
       break;
 
-    case IE_BX_DI:
+    case ie_bx_di:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, DI));
       break;
 
-    case IE_BP_SI:
+    case ie_bp_si:
       result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, SI));
       break;
 
-    case IE_BP_DI:
+    case ie_bp_di:
       result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, DI));
       break;
 
-    case IE_SI:
+    case ie_si:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, SI));
       break;
 
-    case IE_DI:
+    case ie_di:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, DI));
       break;
 
-    case IE_BP:
+    case ie_bp:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BP));
       break;
 
-    case IE_BX:
+    case ie_bx:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BX));
       break;
 
@@ -152,23 +150,23 @@ static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cp
 
 static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
   switch (operand->type) {
-    case OT_INDIRECT:
+    case ot_indirect:
       return get_operand_indirect_value_8(operand, cpu);
 
-    case OT_DISPLACEMENT:
+    case ot_displacement:
       assert(0);
       break;
 
-    case OT_REGISTER:
+    case ot_register:
       return get_operand_register_value_8(operand, cpu);
 
-    case OT_DIRECT:
+    case ot_direct:
       return bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address));
 
-    case OT_IMMEDIATE:
+    case ot_immediate:
       return operand->as_immediate.immediate_8;
 
-    case OT_NONE:
+    case ot_none:
     default:
       assert(0);
   }
@@ -178,21 +176,21 @@ static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
 
 static u16 get_operand_value_16(struct operand *operand, struct cpu *cpu) {
   switch (operand->type) {
-    case OT_INDIRECT:
+    case ot_indirect:
       return get_operand_indirect_value_16(operand, cpu);
 
-    case OT_DISPLACEMENT:
+    case ot_displacement:
       assert(0);
       break;
 
-    case OT_REGISTER:
+    case ot_register:
       return get_operand_register_value_16(operand, cpu);
 
-    case OT_DIRECT:
+    case ot_direct:
       return bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address)) +
              (bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address + 1)) << 8);
 
-    case OT_IMMEDIATE:
+    case ot_immediate:
       return operand->as_immediate.immediate_16;
 
     default:
@@ -225,24 +223,24 @@ static void set_operand_register_value_16(struct operand *operand, struct cpu *c
 
 static void set_operand_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
   switch (operand->type) {
-    case OT_INDIRECT:
+    case ot_indirect:
       set_operand_indirect_value_8(operand, cpu, value);
       break;
 
-    case OT_DISPLACEMENT:
+    case ot_displacement:
       assert(0);
       break;
 
-    case OT_REGISTER:
+    case ot_register:
       set_operand_register_value_8(operand, cpu, value);
       break;
 
-    case OT_DIRECT:
+    case ot_direct:
       bus_store(cpu->bus, segment_offset(0, operand->as_direct.address), value);
       break;
 
-    case OT_IMMEDIATE:
-    case OT_NONE:
+    case ot_immediate:
+    case ot_none:
     default:
       assert(0);
       break;
@@ -251,25 +249,25 @@ static void set_operand_value_8(struct operand *operand, struct cpu *cpu, u8 val
 
 static void set_operand_value_16(struct operand *operand, struct cpu *cpu, u16 value) {
   switch (operand->type) {
-    case OT_INDIRECT:
+    case ot_indirect:
       set_operand_indirect_value_16(operand, cpu, value);
       break;
 
-    case OT_DISPLACEMENT:
+    case ot_displacement:
       assert(0);
       break;
 
-    case OT_REGISTER:
+    case ot_register:
       set_operand_register_value_16(operand, cpu, value);
       break;
 
-    case OT_DIRECT:
+    case ot_direct:
       bus_store(cpu->bus, segment_offset(0, operand->as_direct.address), value >> 8);
       bus_store(cpu->bus, segment_offset(0, operand->as_direct.address + 1), value & 0xff);
       break;
 
-    case OT_IMMEDIATE:
-    case OT_NONE:
+    case ot_immediate:
+    case ot_none:
     default:
       assert(0);
       break;
@@ -283,11 +281,11 @@ static void interpret_add(struct cpu *cpu, struct instruction *instruction) {
   u16 value16;
 
   switch (instruction->destination.size) {
-    case OS_8:
+    case os_8:
       value8 = get_operand_value_8(&instruction->destination, cpu);
       break;
 
-    case OS_16:
+    case os_16:
       value16 = get_operand_value_16(&instruction->destination, cpu);
       break;
 
@@ -296,11 +294,11 @@ static void interpret_add(struct cpu *cpu, struct instruction *instruction) {
   }
 
   switch (instruction->source.size) {
-    case OS_8:
+    case os_8:
       value8 += get_operand_value_8(&instruction->source, cpu);
       break;
 
-    case OS_16:
+    case os_16:
       value16 += get_operand_value_16(&instruction->source, cpu);
       break;
 
@@ -309,11 +307,11 @@ static void interpret_add(struct cpu *cpu, struct instruction *instruction) {
   }
 
   switch (instruction->destination.size) {
-    case OS_8:
+    case os_8:
       set_operand_value_8(&instruction->destination, cpu, value8);
       break;
 
-    case OS_16:
+    case os_16:
       set_operand_value_16(&instruction->destination, cpu, value16);
       break;
 
@@ -326,9 +324,9 @@ static void interpret_inc(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == INC);
 
   switch (instruction->destination.size) {
-    case OS_8: {
+    case os_8: {
       switch (instruction->destination.type) {
-        case OT_REGISTER: {
+        case ot_register: {
           u8 value = get_operand_value_8(&instruction->destination, cpu);
           set_operand_value_8(&instruction->destination, cpu, value + 1);
           break;
@@ -340,9 +338,9 @@ static void interpret_inc(struct cpu *cpu, struct instruction *instruction) {
       break;
     }
 
-    case OS_16: {
+    case os_16: {
       switch (instruction->destination.type) {
-        case OT_REGISTER: {
+        case ot_register: {
           u16 value = get_operand_value_16(&instruction->destination, cpu);
           set_operand_value_16(&instruction->destination, cpu, value + 1);
           break;
@@ -363,11 +361,11 @@ static void interpret_mov(struct cpu *cpu, struct instruction *instruction) {
   u16 value16;
 
   switch (instruction->source.size) {
-    case OS_8:
+    case os_8:
       value8 = get_operand_value_8(&instruction->source, cpu);
       break;
 
-    case OS_16:
+    case os_16:
       value16 = get_operand_value_16(&instruction->source, cpu);
       break;
 
@@ -376,11 +374,11 @@ static void interpret_mov(struct cpu *cpu, struct instruction *instruction) {
   }
 
   switch (instruction->destination.size) {
-    case OS_8:
+    case os_8:
       set_operand_value_8(&instruction->destination, cpu, value8);
       break;
 
-    case OS_16:
+    case os_16:
       set_operand_value_16(&instruction->destination, cpu, value16);
       break;
 
@@ -392,29 +390,29 @@ static void interpret_mov(struct cpu *cpu, struct instruction *instruction) {
 static void interpret_test(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == TEST);
 
-  cpu_clear_flag(cpu, FLAG_CF);
-  cpu_clear_flag(cpu, FLAG_OF);
+  cpu_clear_flag(cpu, fl_cf);
+  cpu_clear_flag(cpu, fl_of);
 
   switch (instruction->destination.size) {
-    case OS_8: {
+    case os_8: {
       u8 destination = get_operand_value_8(&instruction->destination, cpu);
       u8 source = get_operand_value_8(&instruction->source, cpu);
       u8 r = destination & source;
 
-      set_flag_value(cpu, FLAG_SF, r & 0xff);
-      set_flag_value(cpu, FLAG_ZF, !r);
+      cpu_set_flag_value(cpu, fl_sf, r & 0xff);
+      cpu_set_flag_value(cpu, fl_zf, !r);
 
       // TODO: More flags are affected by TEST
       break;
     }
 
-    case OS_16: {
+    case os_16: {
       u16 destination = get_operand_value_16(&instruction->destination, cpu);
       u16 source = get_operand_value_16(&instruction->source, cpu);
       u16 r = destination & source;
 
-      set_flag_value(cpu, FLAG_SF, r & 0xffff);
-      set_flag_value(cpu, FLAG_ZF, !r);
+      cpu_set_flag_value(cpu, fl_sf, r & 0xffff);
+      cpu_set_flag_value(cpu, fl_zf, !r);
       break;
     }
 
@@ -427,7 +425,7 @@ static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == LOOP);
 
   switch (instruction->destination.size) {
-    case OS_8: {
+    case os_8: {
       u8 cl = cpu_get_register_8(cpu, CL) - 1;
       cpu_set_register_8(cpu, CL, cl);
       if (cl) {
@@ -436,7 +434,7 @@ static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
       break;
     }
 
-    case OS_16: {
+    case os_16: {
       u8 cx = cpu_get_register_16(cpu, CX);
       if (cx) {
         cpu_set_register_16(cpu, CX, cx - 1);
@@ -466,7 +464,7 @@ static void interpret_jmp(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == JMP);
 
   switch (instruction->destination.type) {
-    case OT_DIRECT_WITH_SEGMENT: {
+    case ot_direct_with_segment: {
       struct address address = instruction->destination.as_direct_with_segment.address;
       cpu->segments[CS] = address.segment;
       cpu->ip = address.offset;
@@ -506,7 +504,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       break;
 
     case CMP: {
-      if (instruction->destination.size == OS_8) {
+      if (instruction->destination.size == os_8) {
         u8 destination = get_operand_value_8(&instruction->destination, cpu);
         u8 source = get_operand_value_8(&instruction->source, cpu);
         set_flags_subtract_8(cpu, destination, source);
@@ -527,71 +525,71 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       break;
 
     case JB: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (cpu_flag_is_set(cpu, FLAG_CF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (cpu_flag_is_set(cpu, fl_cf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JNB: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (!cpu_flag_is_set(cpu, FLAG_CF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (!cpu_flag_is_set(cpu, fl_cf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JZ: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (cpu_flag_is_set(cpu, FLAG_ZF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (cpu_flag_is_set(cpu, fl_zf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JNZ: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (!cpu_flag_is_set(cpu, FLAG_ZF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (!cpu_flag_is_set(cpu, fl_zf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JP: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (cpu_flag_is_set(cpu, FLAG_PF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (cpu_flag_is_set(cpu, fl_pf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JNP: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (!cpu_flag_is_set(cpu, FLAG_PF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (!cpu_flag_is_set(cpu, fl_pf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JS: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (cpu_flag_is_set(cpu, FLAG_SF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (cpu_flag_is_set(cpu, fl_sf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case JNS: {
-      assert(instruction->destination.type == OT_JUMP);
-      if (!cpu_flag_is_set(cpu, FLAG_SF)) {
+      assert(instruction->destination.type == ot_jump);
+      if (!cpu_flag_is_set(cpu, fl_sf)) {
         cpu->ip += instruction->destination.as_jump.offset;
       }
       break;
     }
 
     case CLI: {
-      cpu_clear_flag(cpu, FLAG_IF);
+      cpu_clear_flag(cpu, fl_if);
       break;
     }
 
@@ -637,58 +635,6 @@ void hex_dump(const u8 *data, unsigned data_size) {
     } else {
       printf(" ");
     }
-  }
-}
-
-void cpu_run(struct cpu *cpu) {
-  print_registers(cpu);
-  printf("\n");
-
-  while (1) {
-    u8 buffer[16];
-    memset(buffer, 0, sizeof(buffer));
-    unsigned buffer_size = cpu_prefetch(cpu, buffer, sizeof(buffer));
-
-    // hex_dump(buffer, 16);
-
-    struct instruction instruction;
-    memset(&instruction, 0, sizeof(struct instruction));
-
-#if !defined(NDEBUG)
-    memcpy(instruction.buffer, buffer, sizeof(buffer));
-#endif
-
-    int instruction_size = decode_instruction(buffer, buffer_size, &instruction);
-    instruction.instruction_size = instruction_size;
-
-    if (instruction_size < 0) {
-      printf("Could not decode instructions [");
-      for (unsigned i = 0; i < sizeof(buffer); ++i) {
-        printf("%02x", buffer[i]);
-        if (i < sizeof(buffer) - 1) {
-          printf(" ");
-        }
-      }
-      printf("]\n");
-      break;
-    }
-
-    disassemble(&instruction, segment_offset(cpu->segments[CS], cpu->ip));
-
-    cpu->ip += instruction_size;
-
-    if (instruction.type == HLT) {
-      printf("HLT");
-      break;
-    }
-
-    // Interpret the instruction after adjusting the IP.
-
-    fflush(stdout);
-    interpret_instruction(cpu, &instruction);
-
-    print_registers(cpu);
-    printf("\n");
   }
 }
 
