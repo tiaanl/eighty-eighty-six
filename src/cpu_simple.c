@@ -2,7 +2,10 @@
 #include "cpu.h"
 #include "decoder/mod_reg_rm.h"
 #include "print_format.h"
+
+#if defined(TESTING)
 #include "testing.h"
+#endif
 
 #include <stdio.h>
 
@@ -404,10 +407,11 @@ void test_fetch_mod_reg_rm(void) {
     testing_dummy_cpu_init(&cpu, &bus, tests[i].buffer, 6);
 
     struct mod_reg_rm mrr = fetch_mod_reg_rm(&cpu);
-    assert(mrr.mod == tests[i].result.mod);
-    assert(mrr.reg == tests[i].result.reg);
-    assert(mrr.rm == tests[i].result.rm);
-    assert(mrr.disp == tests[i].result.disp);
+    EXPECT_U8_EQ(tests[i].result.mod, mrr.mod);
+    EXPECT_U8_EQ(tests[i].result.mod, mrr.mod);
+    EXPECT_U8_EQ(tests[i].result.reg, mrr.reg);
+    EXPECT_U8_EQ(tests[i].result.rm, mrr.rm);
+    EXPECT_I16_EQ(tests[i].result.disp, mrr.disp);
 
     testing_dummy_cpu_destroy(&bus);
   }
@@ -517,7 +521,7 @@ void test_calc_mod_reg_rm_addr(void) {
     cpu.regs.reg_16[DI] = 0x0e0f;
 
     u16 addr = calc_mod_reg_rm_addr(&cpu, tests[i].input);
-    assert(addr == tests[i].result);
+    EXPECT_U16_EQ(tests[i].result, addr);
 
     testing_dummy_cpu_destroy(&bus);
   }
@@ -619,12 +623,13 @@ void test_instruction_rol_8(void) {
       {0b10111111, 0b01111111, 1, 1, 0},
       // TODO: Test for overflow flag.
   };
+
   for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
     struct flags_map flags = decode_flags(0x0);
     u8 result = instruction_rol_8(tests[i].input, tests[i].count, &flags);
-    assert(result == tests[i].result);
-    assert(flags.carry == tests[i].carry);
-    assert(flags.overflow == tests[i].overflow);
+    EXPECT_U8_EQ(result, tests[i].result);
+    EXPECT_U8_EQ(flags.carry, tests[i].carry);
+    EXPECT_U8_EQ(flags.overflow, tests[i].overflow);
   }
 }
 #endif
