@@ -53,18 +53,14 @@ struct operand_direct_with_segment {
   struct address address;
 };
 
-struct operand_register {
-  union {
-    enum register_8 reg_8;
-    enum register_16 reg_16;
-  };
+union operand_register {
+  enum register_8 reg_8;
+  enum register_16 reg_16;
 };
 
-struct operand_immediate {
-  union {
-    u8 immediate_8;
-    u16 immediate_16;
-  };
+union operand_immediate {
+  u8 immediate_8;
+  u16 immediate_16;
 };
 
 struct operand_jump {
@@ -75,20 +71,21 @@ struct operand_segment_register {
   enum segment_register reg;
 };
 
+union operand_data {
+  struct operand_displacement as_displacement;
+  struct operand_indirect as_indirect;
+  struct operand_direct as_direct;
+  struct operand_direct_with_segment as_direct_with_segment;
+  union operand_register as_register;
+  union operand_immediate as_immediate;
+  struct operand_jump as_jump;
+  struct operand_segment_register as_segment_register;
+};
+
 struct operand {
   enum operand_type type;
   enum operand_size size;
-
-  union {
-    struct operand_displacement as_displacement;
-    struct operand_indirect as_indirect;
-    struct operand_direct as_direct;
-    struct operand_direct_with_segment as_direct_with_segment;
-    struct operand_register as_register;
-    struct operand_immediate as_immediate;
-    struct operand_jump as_jump;
-    struct operand_segment_register as_segment_register;
-  };
+  union operand_data data;
 };
 
 enum instruction_type {

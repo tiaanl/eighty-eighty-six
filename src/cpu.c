@@ -42,9 +42,11 @@ const char *segment_register_to_string(enum segment_register reg) {
 
 void print_registers(struct cpu *cpu) {
   printf("ax: " HEX_16 ", bx: " HEX_16 ", cx: " HEX_16 ", dx: " HEX_16 ", ip: " HEX_16 "\n",
-         cpu->reg_16[AX], cpu->reg_16[BX], cpu->reg_16[CX], cpu->reg_16[DX], cpu->ip);
+         cpu->regs.reg_16[AX], cpu->regs.reg_16[BX], cpu->regs.reg_16[CX], cpu->regs.reg_16[DX],
+         cpu->ip);
   printf("si: " HEX_16 ", di: " HEX_16 ", bp: " HEX_16 ", sp: " HEX_16 ", fl: " HEX_16 "\n",
-         cpu->reg_16[SI], cpu->reg_16[DI], cpu->reg_16[BP], cpu->reg_16[SP], cpu->flags);
+         cpu->regs.reg_16[SI], cpu->regs.reg_16[DI], cpu->regs.reg_16[BP], cpu->regs.reg_16[SP],
+         cpu->flags);
 }
 
 static void set_flags_sign_zero_8(struct cpu *cpu, u8 value) {
@@ -64,7 +66,7 @@ static void set_flags_sign_zero_8(struct cpu *cpu, u8 value) {
 static void set_flags_subtract_8(struct cpu *cpu, u8 destination, u8 source) {
   u16 val = (u16)destination - (u16)source;
 
-  set_flags_sign_zero_8(cpu, val);
+  set_flags_sign_zero_8(cpu, (u8)val);
 
   if (val & 0xff00) {
     cpu_set_flag(cpu, fl_cf);
@@ -88,7 +90,7 @@ static void set_flags_subtract_8(struct cpu *cpu, u8 destination, u8 source) {
 struct address get_operand_indirect_address(struct operand *operand, struct cpu *cpu) {
   struct address result;
 
-  switch (operand->as_indirect.encoding) {
+  switch (operand->data.as_indirect.encoding) {
     case ie_bx_si:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, SI));
       break;
@@ -123,6 +125,8 @@ struct address get_operand_indirect_address(struct operand *operand, struct cpu 
 
     default:
       assert(0);
+      result = segment_offset(0, 0);
+      break;
   }
 
   return result;
@@ -141,11 +145,11 @@ static u8 get_operand_indirect_value_8(struct operand *operand, struct cpu *cpu)
 }
 
 static u8 get_operand_register_value_8(struct operand *operand, struct cpu *cpu) {
-  return cpu->reg_8[operand->as_register.reg_8];
+  return cpu->regs.reg_8[operand->data.as_register.reg_8];
 }
 
 static u16 get_operand_register_value_16(struct operand *operand, struct cpu *cpu) {
-  return cpu->reg_16[operand->as_register.reg_16];
+  return cpu->regs.reg_16[operand->data.as_register.reg_16];
 }
 
 static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
@@ -161,10 +165,10 @@ static u8 get_operand_value_8(struct operand *operand, struct cpu *cpu) {
       return get_operand_register_value_8(operand, cpu);
 
     case ot_direct:
-      return bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address));
+      return bus_fetch(cpu->bus, segment_offset(0, operand->data.as_direct.address));
 
     case ot_immediate:
-      return operand->as_immediate.immediate_8;
+      return operand->data.as_immediate.immediate_8;
 
     case ot_none:
     default:
@@ -187,11 +191,11 @@ static u16 get_operand_value_16(struct operand *operand, struct cpu *cpu) {
       return get_operand_register_value_16(operand, cpu);
 
     case ot_direct:
-      return bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address)) +
-             (bus_fetch(cpu->bus, segment_offset(0, operand->as_direct.address + 1)) << 8);
+      return bus_fetch(cpu->bus, segment_offset(0, operand->data.as_direct.address)) +
+             (bus_fetch(cpu->bus, segment_offset(0, operand->data.as_direct.address + 1)) << 8);
 
     case ot_immediate:
-      return operand->as_immediate.immediate_16;
+      return operand->data.as_immediate.immediate_16;
 
     default:
       assert(0);
@@ -214,11 +218,11 @@ static void set_operand_indirect_value_16(struct operand *operand, struct cpu *c
 }
 
 static void set_operand_register_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
-  cpu->reg_8[operand->as_register.reg_8] = value;
+  cpu->regs.reg_8[operand->data.as_register.reg_8] = value;
 }
 
 static void set_operand_register_value_16(struct operand *operand, struct cpu *cpu, u16 value) {
-  cpu->reg_16[operand->as_register.reg_16] = value;
+  cpu->regs.reg_16[operand->data.as_register.reg_16] = value;
 }
 
 static void set_operand_value_8(struct operand *operand, struct cpu *cpu, u8 value) {
@@ -236,7 +240,7 @@ static void set_operand_value_8(struct operand *operand, struct cpu *cpu, u8 val
       break;
 
     case ot_direct:
-      bus_store(cpu->bus, segment_offset(0, operand->as_direct.address), value);
+      bus_store(cpu->bus, segment_offset(0, operand->data.as_direct.address), value);
       break;
 
     case ot_immediate:
@@ -262,8 +266,8 @@ static void set_operand_value_16(struct operand *operand, struct cpu *cpu, u16 v
       break;
 
     case ot_direct:
-      bus_store(cpu->bus, segment_offset(0, operand->as_direct.address), value >> 8);
-      bus_store(cpu->bus, segment_offset(0, operand->as_direct.address + 1), value & 0xff);
+      bus_store(cpu->bus, segment_offset(0, operand->data.as_direct.address), value >> 8);
+      bus_store(cpu->bus, segment_offset(0, operand->data.as_direct.address + 1), value & 0xff);
       break;
 
     case ot_immediate:
@@ -429,16 +433,16 @@ static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
       u8 cl = cpu_get_register_8(cpu, CL) - 1;
       cpu_set_register_8(cpu, CL, cl);
       if (cl) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
     case os_16: {
-      u8 cx = cpu_get_register_16(cpu, CX);
+      u16 cx = cpu_get_register_16(cpu, CX);
       if (cx) {
         cpu_set_register_16(cpu, CX, cx - 1);
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -465,7 +469,7 @@ static void interpret_jmp(struct cpu *cpu, struct instruction *instruction) {
 
   switch (instruction->destination.type) {
     case ot_direct_with_segment: {
-      struct address address = instruction->destination.as_direct_with_segment.address;
+      struct address address = instruction->destination.data.as_direct_with_segment.address;
       cpu->segments[CS] = address.segment;
       cpu->ip = address.offset;
       break;
@@ -527,7 +531,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JB: {
       assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_cf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -535,7 +539,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JNB: {
       assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_cf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -543,7 +547,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JZ: {
       assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_zf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -551,7 +555,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JNZ: {
       assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_zf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -559,7 +563,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JP: {
       assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_pf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -567,7 +571,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JNP: {
       assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_pf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -575,7 +579,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JS: {
       assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_sf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -583,7 +587,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     case JNS: {
       assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_sf)) {
-        cpu->ip += instruction->destination.as_jump.offset;
+        cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
@@ -594,12 +598,12 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case SAHF: {
-      cpu->flags = (cpu->flags & 0xff00) | cpu->reg_8[AH];
+      cpu->flags = (cpu->flags & 0xff00) | cpu->regs.reg_8[AH];
       break;
     }
 
     case LAHF: {
-      cpu->reg_8[AH] = cpu->flags & 0xff;
+      cpu->regs.reg_8[AH] = cpu->flags & 0xff;
       break;
     }
 
@@ -613,7 +617,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
 }
 
 void cpu_init(struct cpu *cpu, struct bus *bus) {
-  memset(cpu->reg_16, 0, sizeof(cpu->reg_16));
+  memset(cpu->regs.reg_16, 0, sizeof(cpu->regs.reg_16));
   cpu->ip = 0;
   cpu->flags = 0;
   memset(cpu->segments, 0, sizeof(cpu->segments));
@@ -639,7 +643,7 @@ unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size) {
   u16 cs = cpu->segments[CS];
   u16 ip = cpu->ip;
 
-  unsigned i = 0;
+  u16 i = 0;
   for (; i < size; ++i) {
     buffer[i] = bus_fetch(cpu->bus, segment_offset(cs, ip + i));
   }
@@ -648,19 +652,19 @@ unsigned cpu_prefetch(struct cpu *cpu, u8 *buffer, unsigned size) {
 }
 
 u8 cpu_get_register_8(struct cpu *cpu, enum register_8 reg) {
-  return cpu->reg_8[reg];
+  return cpu->regs.reg_8[reg];
 }
 
 void cpu_set_register_8(struct cpu *cpu, enum register_8 reg, u8 value) {
-  cpu->reg_8[reg] = value;
+  cpu->regs.reg_8[reg] = value;
 }
 
 u16 cpu_get_register_16(struct cpu *cpu, enum register_16 reg) {
-  return cpu->reg_16[reg];
+  return cpu->regs.reg_16[reg];
 }
 
 void cpu_set_register_16(struct cpu *cpu, enum register_16 reg, u16 value) {
-  cpu->reg_16[reg] = value;
+  cpu->regs.reg_16[reg] = value;
 }
 
 u16 cpu_get_segment(struct cpu *cpu, enum segment_register reg) {

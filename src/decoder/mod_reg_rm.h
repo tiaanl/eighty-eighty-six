@@ -40,14 +40,16 @@ enum mrrm_rm {
   mrrm_rm_count,
 };
 
+union mrrm_reg_rm {
+  u8 b;
+  enum mrrm_rm rm;
+  enum mrrm_reg reg;
+};
+
 struct mrrm {
   enum mrrm_mod mod;
   enum mrrm_reg reg;
-  union {
-    enum mrrm_rm rm_rm;
-    enum mrrm_reg rm_reg;
-    u8 rm_byte;
-  };
+  union mrrm_reg_rm rm;
 };
 
 static inline enum mrrm_mod decode_mrrm_mod(u8 byte) {
@@ -83,11 +85,11 @@ static inline struct mrrm decode_mrrm(u8 byte) {
     case mrrm_mod_indirect:
     case mrrm_mod_byte:
     case mrrm_mod_word:
-      result.rm_rm = decode_mrrm_rm(byte);
+      result.rm.rm = decode_mrrm_rm(byte);
       break;
 
     case mrrm_mod_register:
-      result.rm_reg = decode_mrrm_reg_from_rm(byte);
+      result.rm.reg = decode_mrrm_reg_from_rm(byte);
       break;
 
     default:

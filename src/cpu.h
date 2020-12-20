@@ -24,11 +24,13 @@ enum flags {
   fl_of = 0x0800, // Overflow
 };
 
+union cpu_regs {
+  u16 reg_16[REGISTER_16_COUNT];
+  u8 reg_8[REGISTER_8_COUNT];
+};
+
 struct cpu {
-  union {
-    u16 reg_16[REGISTER_16_COUNT];
-    u8 reg_8[REGISTER_8_COUNT];
-  };
+  union cpu_regs regs;
   u16 ip;
   u16 flags;
   u16 segments[SEGMENT_REGISTER_COUNT];

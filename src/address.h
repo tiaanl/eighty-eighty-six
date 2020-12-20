@@ -3,6 +3,8 @@
 
 #include "platform.h"
 
+#include <assert.h>
+
 struct address {
   u16 segment;
   u16 offset;
@@ -24,8 +26,11 @@ static inline struct address segment_offset(u16 segment, u16 offset) {
 static inline struct address address_offset(struct address address, int offset) {
   struct address result;
 
+  u32 total = address.offset + offset;
+  assert(!(total & 0xffff000));
+
   result.segment = address.segment;
-  result.offset = address.offset + offset;
+  result.offset = total & 0xffff;
 
   return result;
 }

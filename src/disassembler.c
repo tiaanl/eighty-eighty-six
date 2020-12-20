@@ -23,11 +23,11 @@ void print_mnemonic(const struct instruction *instruction) {
 void print_immediate(const struct operand *operand) {
   switch (operand->size) {
     case os_8:
-      printf(HEX_8, operand->as_immediate.immediate_8);
+      printf(HEX_8, operand->data.as_immediate.immediate_8);
       break;
 
     case os_16:
-      printf(HEX_16, operand->as_immediate.immediate_16);
+      printf(HEX_16, operand->data.as_immediate.immediate_16);
       break;
 
     default:
@@ -44,21 +44,21 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       } else if (operand->size == os_16) {
         printf("WORD ");
       }
-      printf("[%s]", indirect_encoding_to_string(operand->as_indirect.encoding));
+      printf("[%s]", indirect_encoding_to_string(operand->data.as_indirect.encoding));
       break;
 
     case ot_displacement:
-      printf("%d", operand->as_displacement.displacement);
+      printf("%d", operand->data.as_displacement.displacement);
       break;
 
     case ot_register:
       switch (operand->size) {
         case os_8:
-          printf("%s", register_8_to_string(operand->as_register.reg_8));
+          printf("%s", register_8_to_string(operand->data.as_register.reg_8));
           break;
 
         case os_16:
-          printf("%s", register_16_to_string(operand->as_register.reg_16));
+          printf("%s", register_16_to_string(operand->data.as_register.reg_16));
           break;
 
         default:
@@ -68,12 +68,12 @@ void print_operand(const struct operand *operand, enum segment_register segment_
 
     case ot_direct:
       printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register),
-             operand->as_direct.address);
+             operand->data.as_direct.address);
       break;
 
     case ot_direct_with_segment:
-      printf(HEX_16 ":" HEX_16, operand->as_direct_with_segment.address.segment,
-             operand->as_direct_with_segment.address.offset);
+      printf(HEX_16 ":" HEX_16, operand->data.as_direct_with_segment.address.segment,
+             operand->data.as_direct_with_segment.address.offset);
       break;
 
     case ot_immediate:
@@ -81,11 +81,11 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       break;
 
     case ot_segment_register:
-      printf("%s", segment_register_to_string(operand->as_segment_register.reg));
+      printf("%s", segment_register_to_string(operand->data.as_segment_register.reg));
       break;
 
     case ot_jump:
-      printf("%d", operand->as_jump.offset);
+      printf("%d", operand->data.as_jump.offset);
       break;
 
     case ot_none:

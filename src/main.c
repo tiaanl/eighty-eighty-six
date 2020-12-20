@@ -3,6 +3,7 @@
 #include "cpu.h"
 
 #include <malloc.h>
+#include <stdio.h>
 
 extern unsigned char small[];
 extern unsigned int small_len;

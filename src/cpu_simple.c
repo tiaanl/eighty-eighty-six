@@ -437,31 +437,32 @@ static u16 calc_mod_reg_rm_addr(struct cpu *cpu, struct mod_reg_rm mrr) {
 
   switch (mrr.rm) {
     case mrrm_rm_bx_si:
-      return cpu->reg_16[BX] + cpu->reg_16[SI] + mrr.disp;
+      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[SI] + mrr.disp;
 
     case mrrm_rm_bx_di:
-      return cpu->reg_16[BX] + cpu->reg_16[DI] + mrr.disp;
+      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[DI] + mrr.disp;
 
     case mrrm_rm_bp_si:
-      return cpu->reg_16[BP] + cpu->reg_16[SI] + mrr.disp;
+      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[SI] + mrr.disp;
 
     case mrrm_rm_bp_di:
-      return cpu->reg_16[BP] + cpu->reg_16[DI] + mrr.disp;
+      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[DI] + mrr.disp;
 
     case mrrm_rm_si:
-      return cpu->reg_16[SI] + mrr.disp;
+      return cpu->regs.reg_16[SI] + mrr.disp;
 
     case mrrm_rm_di:
-      return cpu->reg_16[DI] + mrr.disp;
+      return cpu->regs.reg_16[DI] + mrr.disp;
 
     case mrrm_rm_bp:
-      return cpu->reg_16[BP] + mrr.disp;
+      return cpu->regs.reg_16[BP] + mrr.disp;
 
     case mrrm_rm_bx:
-      return cpu->reg_16[BX] + mrr.disp;
+      return cpu->regs.reg_16[BX] + mrr.disp;
 
     default:
       assert(0);
+      return 0;
   }
 }
 
@@ -503,17 +504,17 @@ void test_calc_mod_reg_rm_addr(void) {
     struct cpu cpu;
     struct bus bus;
 
-    u8 buffer[] = {};
+    u8 buffer[] = {0x00};
     testing_dummy_cpu_init(&cpu, &bus, buffer, sizeof(buffer));
 
-    cpu.reg_16[AX] = 0x0102;
-    cpu.reg_16[CX] = 0x0203;
-    cpu.reg_16[DX] = 0x0405;
-    cpu.reg_16[BX] = 0x0607;
-    cpu.reg_16[BP] = 0x0809;
-    cpu.reg_16[SP] = 0x0a0b;
-    cpu.reg_16[SI] = 0x0c0d;
-    cpu.reg_16[DI] = 0x0e0f;
+    cpu.regs.reg_16[AX] = 0x0102;
+    cpu.regs.reg_16[CX] = 0x0203;
+    cpu.regs.reg_16[DX] = 0x0405;
+    cpu.regs.reg_16[BX] = 0x0607;
+    cpu.regs.reg_16[BP] = 0x0809;
+    cpu.regs.reg_16[SP] = 0x0a0b;
+    cpu.regs.reg_16[SI] = 0x0c0d;
+    cpu.regs.reg_16[DI] = 0x0e0f;
 
     u16 addr = calc_mod_reg_rm_addr(&cpu, tests[i].input);
     assert(addr == tests[i].result);
@@ -538,11 +539,12 @@ static u8 read_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr, enum segment
 
     case mrrm_mod_register: {
       printf("register %s\n", register_8_to_string(mrr.rm));
-      return cpu->reg_8[mrr.rm];
+      return cpu->regs.reg_8[mrr.rm];
     }
 
     default:
       assert(0);
+      return 0;
   }
 }
 
@@ -558,7 +560,7 @@ static void write_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr,
     }
 
     case mrrm_mod_register:
-      cpu->reg_8[mrr.rm] = value;
+      cpu->regs.reg_8[mrr.rm] = value;
       break;
 
     default:
@@ -590,7 +592,7 @@ enum instruction_group_2_type {
 
 static u8 instruction_rol_8(u8 value, u8 count, struct flags_map *flags) {
   u16 value_16 = value;
-  u8 carry;
+  u8 carry = 0;
   while (count > 0) {
     carry = (value_16 & 0x80) ? 1 : 0;
     value_16 = (value_16 << 1) + carry;
@@ -822,125 +824,125 @@ void cpu_run(struct cpu *cpu) {
 
       case 0x9e: {
         // sahf
-        cpu->flags = cpu->flags | cpu->reg_8[AH];
+        cpu->flags = cpu->flags | cpu->regs.reg_8[AH];
         break;
       }
 
       case 0x9f: {
         // sahf
-        cpu->reg_8[AH] = cpu->flags & 0xff;
+        cpu->regs.reg_8[AH] = cpu->flags & 0xff;
         break;
       }
 
       case 0xb0: {
         // mov AL Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[AL] = value;
+        cpu->regs.reg_8[AL] = value;
         break;
       }
 
       case 0xb1: {
         // mov CL Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[CL] = value;
+        cpu->regs.reg_8[CL] = value;
         break;
       }
 
       case 0xb2: {
         // mov DL Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[DL] = value;
+        cpu->regs.reg_8[DL] = value;
         break;
       }
 
       case 0xb3: {
         // mov BL Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[BL] = value;
+        cpu->regs.reg_8[BL] = value;
         break;
       }
 
       case 0xb4: {
         // mov AH Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[AH] = value;
+        cpu->regs.reg_8[AH] = value;
         break;
       }
 
       case 0xb5: {
         // mov CH Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[CH] = value;
+        cpu->regs.reg_8[CH] = value;
         break;
       }
 
       case 0xb6: {
         // mov DH Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[DH] = value;
+        cpu->regs.reg_8[DH] = value;
         break;
       }
 
       case 0xb7: {
         // mov BH Ib
         u8 value = cpu_fetch_8(cpu);
-        cpu->reg_8[BH] = value;
+        cpu->regs.reg_8[BH] = value;
         break;
       }
 
       case 0xb8: {
         // mov AX Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[AX] = value;
+        cpu->regs.reg_16[AX] = value;
         break;
       }
 
       case 0xb9: {
         // mov CX Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[CX] = value;
+        cpu->regs.reg_16[CX] = value;
         break;
       }
 
       case 0xba: {
         // mov DX Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[DX] = value;
+        cpu->regs.reg_16[DX] = value;
         break;
       }
 
       case 0xbb: {
         // mov BX Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[BX] = value;
+        cpu->regs.reg_16[BX] = value;
         break;
       }
 
       case 0xbc: {
         // mov BP Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[BP] = value;
+        cpu->regs.reg_16[BP] = value;
         break;
       }
 
       case 0xbd: {
         // mov SP Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[SP] = value;
+        cpu->regs.reg_16[SP] = value;
         break;
       }
 
       case 0xbe: {
         // mov SI Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[SI] = value;
+        cpu->regs.reg_16[SI] = value;
         break;
       }
 
       case 0xbf: {
         // mov DI Ib
         u16 value = cpu_fetch_16(cpu);
-        cpu->reg_16[DI] = value;
+        cpu->regs.reg_16[DI] = value;
         break;
       }
 
@@ -949,7 +951,7 @@ void cpu_run(struct cpu *cpu) {
         u8 value = read_mod_reg_rm_8(cpu, mrr, segment_register);
 
         struct flags_map flags = decode_flags(cpu->flags);
-        instruction_group_2_8(mrr.reg, &flags, value, cpu->reg_8[CL]);
+        instruction_group_2_8(mrr.reg, &flags, value, cpu->regs.reg_8[CL]);
 
         write_mod_reg_rm_8(cpu, mrr, segment_register, value);
         return;

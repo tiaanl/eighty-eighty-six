@@ -91,27 +91,27 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
       enum indirect_encoding indirect_encoding = mod_rm_byte & 0x07;
       if (indirect_encoding == ie_bp) {
         result->type = ot_direct;
-        result->as_direct.address = read_u16(buffer + data_offset, buffer_size - data_offset);
+        result->data.as_direct.address = read_u16(buffer + data_offset, buffer_size - data_offset);
         return 2;
       } else {
         result->type = ot_indirect;
-        result->as_indirect.encoding = indirect_encoding;
+        result->data.as_indirect.encoding = indirect_encoding;
         return 0;
       }
     }
 
     case mrrm_mod_byte: {
       result->type = ot_displacement;
-      result->as_indirect.encoding = mod_rm_byte & 0x07;
-      result->as_displacement.displacement =
+      result->data.as_indirect.encoding = mod_rm_byte & 0x07;
+      result->data.as_displacement.displacement =
           (i16)read_i8(buffer + data_offset, buffer_size - data_offset);
       return 1;
     }
 
     case mrrm_mod_word: {
       result->type = ot_displacement;
-      result->as_indirect.encoding = mod_rm_byte & 0x07;
-      result->as_displacement.displacement =
+      result->data.as_indirect.encoding = mod_rm_byte & 0x07;
+      result->data.as_displacement.displacement =
           read_i16(buffer + data_offset, buffer_size - data_offset);
       return 2;
     }
@@ -120,11 +120,12 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
       result->type = ot_register;
       switch (size) {
         case os_8:
-          result->as_register.reg_8 = encoding_to_register_8(decode_mrrm_reg_from_rm(mod_rm_byte));
+          result->data.as_register.reg_8 =
+              encoding_to_register_8(decode_mrrm_reg_from_rm(mod_rm_byte));
           return 0;
 
         case os_16:
-          result->as_register.reg_16 =
+          result->data.as_register.reg_16 =
               encoding_to_register_16(decode_mrrm_reg_from_rm(mod_rm_byte));
           return 0;
 
@@ -138,6 +139,7 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
   }
 
   assert(0);
+  return 0;
 }
 
 int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsigned buffer_size,
@@ -146,28 +148,30 @@ int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsign
     case DT_IMM_8: {
       result->type = ot_immediate;
       result->size = os_8;
-      result->as_immediate.immediate_8 = read_u8(buffer + data_offset, buffer_size - data_offset);
+      result->data.as_immediate.immediate_8 =
+          read_u8(buffer + data_offset, buffer_size - data_offset);
       return 1;
     }
 
     case DT_IMM_16: {
       result->type = ot_immediate;
       result->size = os_16;
-      result->as_immediate.immediate_16 = read_u16(buffer + data_offset, buffer_size - data_offset);
+      result->data.as_immediate.immediate_16 =
+          read_u16(buffer + data_offset, buffer_size - data_offset);
       return 2;
     }
 
     case DT_JMP_8: {
       result->type = ot_jump;
       result->size = os_8;
-      result->as_jump.offset = (i16)read_i8(buffer + data_offset, buffer_size - data_offset);
+      result->data.as_jump.offset = (i16)read_i8(buffer + data_offset, buffer_size - data_offset);
       return 1;
     }
 
     case DT_JMP_16: {
       result->type = ot_jump;
       result->size = os_16;
-      result->as_jump.offset = read_i16(buffer + data_offset, buffer_size - data_offset);
+      result->data.as_jump.offset = read_i16(buffer + data_offset, buffer_size - data_offset);
       return 2;
     }
 
@@ -179,6 +183,7 @@ int decode_operand_common(enum decode_type decode_type, const u8 *buffer, unsign
       printf("Invalid operand decode type\n");
       dump_buffer(buffer, buffer_size);
       assert(0);
+      return 0;
   }
 }
 
@@ -188,42 +193,42 @@ int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buff
     case DT_OP_CODE_REG_8: {
       result->type = ot_register;
       result->size = os_8;
-      result->as_register.reg_8 = encoding_to_register_8(buffer[0] & 0x07);
+      result->data.as_register.reg_8 = encoding_to_register_8(buffer[0] & 0x07);
       return 0;
     }
 
     case DT_OP_CODE_REG_16: {
       result->type = ot_register;
       result->size = os_16;
-      result->as_register.reg_16 = encoding_to_register_16(buffer[0] & 0x07);
+      result->data.as_register.reg_16 = encoding_to_register_16(buffer[0] & 0x07);
       return 0;
     }
 
     case DT_AL: {
       result->type = ot_register;
       result->size = os_8;
-      result->as_register.reg_8 = AL;
+      result->data.as_register.reg_8 = AL;
       return 0;
     }
 
     case DT_AX: {
       result->type = ot_register;
       result->size = os_16;
-      result->as_register.reg_16 = AX;
+      result->data.as_register.reg_16 = AX;
       return 0;
     }
 
     case DT_DX: {
       result->type = ot_register;
       result->size = os_16;
-      result->as_register.reg_16 = DX;
+      result->data.as_register.reg_16 = DX;
       return 0;
     }
 
     case DT_SEGMENT_REG: { // Duplicated
       result->type = ot_segment_register;
       result->size = 16;
-      result->as_segment_register.reg = encoding_to_segment_register(buffer[0] >> 3 & 0x07);
+      result->data.as_segment_register.reg = encoding_to_segment_register(buffer[0] >> 3 & 0x07);
       return 0;
     }
 
@@ -232,7 +237,7 @@ int decode_operand(enum decode_type decode_type, const u8 *buffer, unsigned buff
       result->size = 16;
       u16 offset = read_u16(buffer + data_offset, buffer_size - data_offset);
       u16 segment = read_u16(buffer + data_offset + 2, buffer_size - data_offset - 2);
-      result->as_direct_with_segment.address = segment_offset(segment, offset);
+      result->data.as_direct_with_segment.address = segment_offset(segment, offset);
       return 0;
     }
 
@@ -249,14 +254,14 @@ int decode_operand_with_mod_rm(enum decode_type decode_type, const u8 *buffer, u
     case DT_MOD_RM_REG_8: {
       result->type = ot_register;
       result->size = os_8;
-      result->as_register.reg_8 = encoding_to_register_8(mod_rm_byte >> 3 & 0x07);
+      result->data.as_register.reg_8 = encoding_to_register_8(mod_rm_byte >> 3 & 0x07);
       return 0;
     }
 
     case DT_MOD_RM_REG_16: {
       result->type = ot_register;
       result->size = os_16;
-      result->as_register.reg_16 = encoding_to_register_16(mod_rm_byte >> 3 & 0x07);
+      result->data.as_register.reg_16 = encoding_to_register_16(mod_rm_byte >> 3 & 0x07);
       return 0;
     }
 
@@ -271,7 +276,7 @@ int decode_operand_with_mod_rm(enum decode_type decode_type, const u8 *buffer, u
     case DT_SEGMENT_REG: { // Duplicated
       result->type = ot_segment_register;
       result->size = 16;
-      result->as_segment_register.reg = encoding_to_segment_register(buffer[1] >> 3 & 0x07);
+      result->data.as_segment_register.reg = encoding_to_segment_register(buffer[1] >> 3 & 0x07);
       return 0;
     }
 
