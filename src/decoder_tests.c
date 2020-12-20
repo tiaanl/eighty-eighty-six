@@ -4,6 +4,8 @@
 
 #include <assert.h>
 
+#if 0
+
 #define ASSERT_OPERAND_INDIRECT(Size)                                                              \
   void assert_operand_indirect_##Size(struct operand *operand, enum indirect_encoding encoding) {  \
     assert(operand->type == OT_INDIRECT);                                                          \
@@ -1091,3 +1093,4 @@ void decoder_tests(void) {
   test_fe();
   test_ff();
 }
+#endif  // 0

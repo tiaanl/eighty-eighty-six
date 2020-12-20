@@ -71,4 +71,8 @@ static inline void cpu_set_flag_value(struct cpu *cpu, enum flags flag, int valu
 
 void print_registers(struct cpu *cpu);
 
+#if defined(TESTING)
+void test_cpu(void);
+#endif
+
 #endif // CPU_H_

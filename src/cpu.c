@@ -619,9 +619,6 @@ void cpu_init(struct cpu *cpu, struct bus *bus) {
   memset(cpu->segments, 0, sizeof(cpu->segments));
 
   cpu->bus = bus;
-
-  cpu->segments[CS] = 0xffff;
-  cpu->ip = 0x0000;
 }
 
 void hex_dump(const u8 *data, unsigned data_size) {
@@ -669,3 +666,11 @@ void cpu_set_register_16(struct cpu *cpu, enum register_16 reg, u16 value) {
 u16 cpu_get_segment(struct cpu *cpu, enum segment_register reg) {
   return cpu->segments[reg];
 }
+
+#if defined(TESTING)
+void test_simple_cpu(void);
+
+void test_cpu(void) {
+  test_simple_cpu();
+}
+#endif

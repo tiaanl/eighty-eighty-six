@@ -9,7 +9,7 @@ add_custom_target(assemble
     )
 
 set(SOURCE_FILES
-    ${PROJECT_BINARY_DIR}/small.c
+    #${PROJECT_BINARY_DIR}/small.c
     src/address.h
     src/bus.c
     src/bus.h
@@ -32,13 +32,16 @@ set(SOURCE_FILES
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})
-target_compile_options(main PUBLIC -Wall -Wextra)
+target_compile_options(main PUBLIC -Wall -Wextra -pedantic --coverage)
 add_dependencies(main assemble)
 
 set(TEST_FILES
-    src/decoder_tests.c
     src/decoder/mod_reg_rm_tests.c
-    src/tests.c
+    src/decoder_tests.c
+    src/testing.c
+    src/testing.h
     )
 
-add_executable(tests ${TEST_FILES} ${SOURCE_FILES})
+add_executable(testing ${TEST_FILES} ${SOURCE_FILES})
+target_compile_options(main PUBLIC -Wall -Wextra -pedantic --coverage)
+target_compile_definitions(testing PUBLIC -DTESTING)
