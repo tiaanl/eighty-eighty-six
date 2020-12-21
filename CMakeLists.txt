@@ -9,7 +9,8 @@ add_custom_target(assemble
     )
 
 set(SOURCE_FILES
-    #${PROJECT_BINARY_DIR}/small.c
+    # ${PROJECT_BINARY_DIR}/small.c
+    src/mod_rm.h
     src/address.h
     src/bus.c
     src/bus.h
@@ -17,11 +18,6 @@ set(SOURCE_FILES
     src/cpu.h
     src/cpu_decoder.c
     src/cpu_simple.c
-    src/decoder/decoder.c
-    src/decoder/decoder.h
-    src/decoder/mod_reg_rm.h
-    src/decoder/op_code_table.c
-    src/decoder/op_code_table.h
     src/disassembler.c
     src/disassembler.h
     src/instruction.c
@@ -37,7 +33,7 @@ set_target_properties(main PROPERTIES
     C_EXTENSIONS NO
     )
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(main PUBLIC -Wall -Wextra -pedantic --coverage)
+    target_compile_options(main PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(main PUBLIC -Wall -Wextra -pedantic --coverage)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
@@ -48,8 +44,7 @@ endif ()
 add_dependencies(main assemble)
 
 set(TEST_FILES
-    src/decoder/mod_reg_rm_tests.c
-    src/decoder_tests.c
+    src/mod_rm_tests.c
     src/testing.c
     src/testing.h
     )
@@ -62,7 +57,7 @@ set_target_properties(testing PROPERTIES
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(testing PUBLIC -Wall -Wextra -pedantic --coverage)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic --coverage)
+    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
     # using Intel C++
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

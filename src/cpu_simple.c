@@ -1,6 +1,6 @@
 #include "bus.h"
 #include "cpu.h"
-#include "decoder/mod_reg_rm.h"
+#include "mod_rm.h"
 #include "print_format.h"
 
 #if defined(TESTING)
@@ -9,10 +9,7 @@
 
 #include <stdio.h>
 
-#define MOD_REG_RM_MOD(x) ((x) >> 0x06)
-#define MOD_REG_RM_REG(x) ((x) >> 0x03 & 0x07)
-#define MOD_REG_RM_RM(x) ((x)&0x07)
-
+// Map of 8-bit parity flags. sum of set bits are equal.
 static const u8 parity[0x100] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -80,41 +77,30 @@ static u16 cpu_fetch_16(struct cpu *cpu) {
   return low + (high << 8);
 }
 
-struct mod_reg_rm {
-  u8 mod;
-  u8 reg;
-  u8 rm;
-  i16 disp;
-};
-
-struct mod_reg_rm fetch_mod_reg_rm(struct cpu *cpu) {
-  struct mod_reg_rm result;
-
+struct mod_rm fetch_mod_rm(struct cpu *cpu) {
   u8 mrr_byte = cpu_fetch_8(cpu);
 
-  result.mod = MOD_REG_RM_MOD(mrr_byte);
-  result.reg = MOD_REG_RM_REG(mrr_byte);
-  result.rm = MOD_REG_RM_RM(mrr_byte);
+  struct mod_rm result = decode_mod_rm(mrr_byte);
 
   switch (result.mod) {
-    case mrrm_mod_indirect:
-      if (result.rm == 0x06) {
-        result.disp = cpu_fetch_16(cpu);
+    case mod_rm_mod_indirect:
+      if (result.reg_mem.as_mem == mod_rm_mem_bp) {
+        result.displacement.as_address = cpu_fetch_16(cpu);
       } else {
-        result.disp = 0;
+        result.displacement.as_offset = 0;
       }
       break;
 
-    case mrrm_mod_word:
-      result.disp = cpu_fetch_16(cpu);
+    case mod_rm_mod_word:
+      result.displacement.as_offset = cpu_fetch_16(cpu);
       break;
 
-    case mrrm_mod_byte:
-      result.disp = cpu_fetch_8(cpu);
+    case mod_rm_mod_byte:
+      result.displacement.as_offset = cpu_fetch_8(cpu);
       break;
 
     default:
-      result.disp = 0;
+      result.displacement.as_offset = 0;
       break;
   }
 
@@ -125,279 +111,279 @@ struct mod_reg_rm fetch_mod_reg_rm(struct cpu *cpu) {
 void test_fetch_mod_reg_rm(void) {
   static struct {
     u8 buffer[6];
-    struct mod_reg_rm result;
+    struct mod_rm result;
   } tests[] = {
-      {{0x00, 0x00, 0xf0}, {mrrm_mod_indirect, AX, mrrm_rm_bx_si, 0}},
-      {{0x01, 0x01, 0xf1}, {mrrm_mod_indirect, AX, mrrm_rm_bx_di, 0}},
-      {{0x02, 0x02, 0xf2}, {mrrm_mod_indirect, AX, mrrm_rm_bp_si, 0}},
-      {{0x03, 0x03, 0xf3}, {mrrm_mod_indirect, AX, mrrm_rm_bp_di, 0}},
-      {{0x04, 0x04, 0xf4}, {mrrm_mod_indirect, AX, mrrm_rm_si, 0}},
-      {{0x05, 0x05, 0xf5}, {mrrm_mod_indirect, AX, mrrm_rm_di, 0}},
-      {{0x06, 0x06, 0xf6}, {mrrm_mod_indirect, AX, mrrm_rm_bp, 0xf606}},
-      {{0x07, 0x07, 0xf7}, {mrrm_mod_indirect, AX, mrrm_rm_bx, 0}},
-      {{0x08, 0x08, 0xf8}, {mrrm_mod_indirect, CX, mrrm_rm_bx_si, 0}},
-      {{0x09, 0x09, 0xf9}, {mrrm_mod_indirect, CX, mrrm_rm_bx_di, 0}},
-      {{0x0a, 0x0a, 0xfa}, {mrrm_mod_indirect, CX, mrrm_rm_bp_si, 0}},
-      {{0x0b, 0x0b, 0xfb}, {mrrm_mod_indirect, CX, mrrm_rm_bp_di, 0}},
-      {{0x0c, 0x0c, 0xfc}, {mrrm_mod_indirect, CX, mrrm_rm_si, 0}},
-      {{0x0d, 0x0d, 0xfd}, {mrrm_mod_indirect, CX, mrrm_rm_di, 0}},
-      {{0x0e, 0x0e, 0xfe}, {mrrm_mod_indirect, CX, mrrm_rm_bp, 0xfe0e}},
-      {{0x0f, 0x0f, 0xff}, {mrrm_mod_indirect, CX, mrrm_rm_bx, 0}},
+      {{0x00, 0x00, 0xf0}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x01, 0x01, 0xf1}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x02, 0x02, 0xf2}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x03, 0x03, 0xf3}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x04, 0x04, 0xf4}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x05, 0x05, 0xf5}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x06, 0x06, 0xf6}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp}, {.as_address = 0xf606}}},
+      {{0x07, 0x07, 0xf7}, {mod_rm_mod_indirect, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
+      {{0x08, 0x08, 0xf8}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x09, 0x09, 0xf9}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x0a, 0x0a, 0xfa}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x0b, 0x0b, 0xfb}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x0c, 0x0c, 0xfc}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x0d, 0x0d, 0xfd}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x0e, 0x0e, 0xfe}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp}, {.as_address = 0xfe0e}}},
+      {{0x0f, 0x0f, 0xff}, {mod_rm_mod_indirect, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
 
-      {{0x10, 0x10, 0x00}, {mrrm_mod_indirect, DX, mrrm_rm_bx_si, 0}},
-      {{0x11, 0x11, 0x01}, {mrrm_mod_indirect, DX, mrrm_rm_bx_di, 0}},
-      {{0x12, 0x12, 0x02}, {mrrm_mod_indirect, DX, mrrm_rm_bp_si, 0}},
-      {{0x13, 0x13, 0x03}, {mrrm_mod_indirect, DX, mrrm_rm_bp_di, 0}},
-      {{0x14, 0x14, 0x04}, {mrrm_mod_indirect, DX, mrrm_rm_si, 0}},
-      {{0x15, 0x15, 0x05}, {mrrm_mod_indirect, DX, mrrm_rm_di, 0}},
-      {{0x16, 0x16, 0x06}, {mrrm_mod_indirect, DX, mrrm_rm_bp, 0x0616}},
-      {{0x17, 0x17, 0x07}, {mrrm_mod_indirect, DX, mrrm_rm_bx, 0}},
-      {{0x18, 0x18, 0x08}, {mrrm_mod_indirect, BX, mrrm_rm_bx_si, 0}},
-      {{0x19, 0x19, 0x09}, {mrrm_mod_indirect, BX, mrrm_rm_bx_di, 0}},
-      {{0x1a, 0x1a, 0x0a}, {mrrm_mod_indirect, BX, mrrm_rm_bp_si, 0}},
-      {{0x1b, 0x1b, 0x0b}, {mrrm_mod_indirect, BX, mrrm_rm_bp_di, 0}},
-      {{0x1c, 0x1c, 0x0c}, {mrrm_mod_indirect, BX, mrrm_rm_si, 0}},
-      {{0x1d, 0x1d, 0x0d}, {mrrm_mod_indirect, BX, mrrm_rm_di, 0}},
-      {{0x1e, 0x1e, 0x0e}, {mrrm_mod_indirect, BX, mrrm_rm_bp, 0x0e1e}},
-      {{0x1f, 0x1f, 0x0f}, {mrrm_mod_indirect, BX, mrrm_rm_bx, 0}},
+      {{0x10, 0x10, 0x00}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x11, 0x11, 0x01}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x12, 0x12, 0x02}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x13, 0x13, 0x03}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x14, 0x14, 0x04}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x15, 0x15, 0x05}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x16, 0x16, 0x06}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x0616}}},
+      {{0x17, 0x17, 0x07}, {mod_rm_mod_indirect, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
+      {{0x18, 0x18, 0x08}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x19, 0x19, 0x09}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x1a, 0x1a, 0x0a}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x1b, 0x1b, 0x0b}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x1c, 0x1c, 0x0c}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x1d, 0x1d, 0x0d}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x1e, 0x1e, 0x0e}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x0e1e}}},
+      {{0x1f, 0x1f, 0x0f}, {mod_rm_mod_indirect, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
 
-      {{0x20, 0x20, 0x10}, {mrrm_mod_indirect, BP, mrrm_rm_bx_si, 0}},
-      {{0x21, 0x21, 0x11}, {mrrm_mod_indirect, BP, mrrm_rm_bx_di, 0}},
-      {{0x22, 0x22, 0x12}, {mrrm_mod_indirect, BP, mrrm_rm_bp_si, 0}},
-      {{0x23, 0x23, 0x13}, {mrrm_mod_indirect, BP, mrrm_rm_bp_di, 0}},
-      {{0x24, 0x24, 0x14}, {mrrm_mod_indirect, BP, mrrm_rm_si, 0}},
-      {{0x25, 0x25, 0x15}, {mrrm_mod_indirect, BP, mrrm_rm_di, 0}},
-      {{0x26, 0x26, 0x16}, {mrrm_mod_indirect, BP, mrrm_rm_bp, 0x1626}},
-      {{0x27, 0x27, 0x17}, {mrrm_mod_indirect, BP, mrrm_rm_bx, 0}},
-      {{0x28, 0x28, 0x18}, {mrrm_mod_indirect, SP, mrrm_rm_bx_si, 0}},
-      {{0x29, 0x29, 0x19}, {mrrm_mod_indirect, SP, mrrm_rm_bx_di, 0}},
-      {{0x2a, 0x2a, 0x1a}, {mrrm_mod_indirect, SP, mrrm_rm_bp_si, 0}},
-      {{0x2b, 0x2b, 0x1b}, {mrrm_mod_indirect, SP, mrrm_rm_bp_di, 0}},
-      {{0x2c, 0x2c, 0x1c}, {mrrm_mod_indirect, SP, mrrm_rm_si, 0}},
-      {{0x2d, 0x2d, 0x1d}, {mrrm_mod_indirect, SP, mrrm_rm_di, 0}},
-      {{0x2e, 0x2e, 0x1e}, {mrrm_mod_indirect, SP, mrrm_rm_bp, 0x1e2e}},
-      {{0x2f, 0x2f, 0x1f}, {mrrm_mod_indirect, SP, mrrm_rm_bx, 0}},
+      {{0x20, 0x20, 0x10}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x21, 0x21, 0x11}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x22, 0x22, 0x12}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x23, 0x23, 0x13}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x24, 0x24, 0x14}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x25, 0x25, 0x15}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x26, 0x26, 0x16}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x1626}}},
+      {{0x27, 0x27, 0x17}, {mod_rm_mod_indirect, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
+      {{0x28, 0x28, 0x18}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x29, 0x29, 0x19}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x2a, 0x2a, 0x1a}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x2b, 0x2b, 0x1b}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x2c, 0x2c, 0x1c}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x2d, 0x2d, 0x1d}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x2e, 0x2e, 0x1e}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x1e2e}}},
+      {{0x2f, 0x2f, 0x1f}, {mod_rm_mod_indirect, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
 
-      {{0x30, 0x30, 0x20}, {mrrm_mod_indirect, SI, mrrm_rm_bx_si, 0}},
-      {{0x31, 0x31, 0x21}, {mrrm_mod_indirect, SI, mrrm_rm_bx_di, 0}},
-      {{0x32, 0x32, 0x22}, {mrrm_mod_indirect, SI, mrrm_rm_bp_si, 0}},
-      {{0x33, 0x33, 0x23}, {mrrm_mod_indirect, SI, mrrm_rm_bp_di, 0}},
-      {{0x34, 0x34, 0x24}, {mrrm_mod_indirect, SI, mrrm_rm_si, 0}},
-      {{0x35, 0x35, 0x25}, {mrrm_mod_indirect, SI, mrrm_rm_di, 0}},
-      {{0x36, 0x36, 0x26}, {mrrm_mod_indirect, SI, mrrm_rm_bp, 0x2636}},
-      {{0x37, 0x37, 0x27}, {mrrm_mod_indirect, SI, mrrm_rm_bx, 0}},
-      {{0x38, 0x38, 0x28}, {mrrm_mod_indirect, DI, mrrm_rm_bx_si, 0}},
-      {{0x39, 0x39, 0x29}, {mrrm_mod_indirect, DI, mrrm_rm_bx_di, 0}},
-      {{0x3a, 0x3a, 0x2a}, {mrrm_mod_indirect, DI, mrrm_rm_bp_si, 0}},
-      {{0x3b, 0x3b, 0x2b}, {mrrm_mod_indirect, DI, mrrm_rm_bp_di, 0}},
-      {{0x3c, 0x3c, 0x2c}, {mrrm_mod_indirect, DI, mrrm_rm_si, 0}},
-      {{0x3d, 0x3d, 0x2d}, {mrrm_mod_indirect, DI, mrrm_rm_di, 0}},
-      {{0x3e, 0x3e, 0x2e}, {mrrm_mod_indirect, DI, mrrm_rm_bp, 0x2e3e}},
-      {{0x3f, 0x3f, 0x2f}, {mrrm_mod_indirect, DI, mrrm_rm_bx, 0}},
+      {{0x30, 0x30, 0x20}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x31, 0x31, 0x21}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x32, 0x32, 0x22}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x33, 0x33, 0x23}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x34, 0x34, 0x24}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x35, 0x35, 0x25}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x36, 0x36, 0x26}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x2636}}},
+      {{0x37, 0x37, 0x27}, {mod_rm_mod_indirect, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
+      {{0x38, 0x38, 0x28}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0}}},
+      {{0x39, 0x39, 0x29}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0}}},
+      {{0x3a, 0x3a, 0x2a}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0}}},
+      {{0x3b, 0x3b, 0x2b}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0}}},
+      {{0x3c, 0x3c, 0x2c}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_si}, {.as_offset = 0}}},
+      {{0x3d, 0x3d, 0x2d}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_di}, {.as_offset = 0}}},
+      {{0x3e, 0x3e, 0x2e}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp}, {.as_address = 0x2e3e}}},
+      {{0x3f, 0x3f, 0x2f}, {mod_rm_mod_indirect, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0}}},
 
-      {{0x40, 0x40, 0x30}, {mrrm_mod_byte, AX, mrrm_rm_bx_si, 0x40}},
-      {{0x41, 0x41, 0x31}, {mrrm_mod_byte, AX, mrrm_rm_bx_di, 0x41}},
-      {{0x42, 0x42, 0x32}, {mrrm_mod_byte, AX, mrrm_rm_bp_si, 0x42}},
-      {{0x43, 0x43, 0x33}, {mrrm_mod_byte, AX, mrrm_rm_bp_di, 0x43}},
-      {{0x44, 0x44, 0x34}, {mrrm_mod_byte, AX, mrrm_rm_si, 0x44}},
-      {{0x45, 0x45, 0x35}, {mrrm_mod_byte, AX, mrrm_rm_di, 0x45}},
-      {{0x46, 0x46, 0x36}, {mrrm_mod_byte, AX, mrrm_rm_bp, 0x46}},
-      {{0x47, 0x47, 0x37}, {mrrm_mod_byte, AX, mrrm_rm_bx, 0x47}},
-      {{0x48, 0x48, 0x38}, {mrrm_mod_byte, CX, mrrm_rm_bx_si, 0x48}},
-      {{0x49, 0x49, 0x39}, {mrrm_mod_byte, CX, mrrm_rm_bx_di, 0x49}},
-      {{0x4a, 0x4a, 0x3a}, {mrrm_mod_byte, CX, mrrm_rm_bp_si, 0x4a}},
-      {{0x4b, 0x4b, 0x3b}, {mrrm_mod_byte, CX, mrrm_rm_bp_di, 0x4b}},
-      {{0x4c, 0x4c, 0x3c}, {mrrm_mod_byte, CX, mrrm_rm_si, 0x4c}},
-      {{0x4d, 0x4d, 0x3d}, {mrrm_mod_byte, CX, mrrm_rm_di, 0x4d}},
-      {{0x4e, 0x4e, 0x3e}, {mrrm_mod_byte, CX, mrrm_rm_bp, 0x4e}},
-      {{0x4f, 0x4f, 0x3f}, {mrrm_mod_byte, CX, mrrm_rm_bx, 0x4f}},
+      {{0x40, 0x40, 0x30}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_si}, {.as_offset= 0x40}}},
+      {{0x41, 0x41, 0x31}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_di}, {.as_offset= 0x41}}},
+      {{0x42, 0x42, 0x32}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_si}, {.as_offset= 0x42}}},
+      {{0x43, 0x43, 0x33}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_di}, {.as_offset= 0x43}}},
+      {{0x44, 0x44, 0x34}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_si}, {.as_offset= 0x44}}},
+      {{0x45, 0x45, 0x35}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_di}, {.as_offset= 0x45}}},
+      {{0x46, 0x46, 0x36}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp}, {.as_offset= 0x46}}},
+      {{0x47, 0x47, 0x37}, {mod_rm_mod_byte, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx}, {.as_offset= 0x47}}},
+      {{0x48, 0x48, 0x38}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset= 0x48}}},
+      {{0x49, 0x49, 0x39}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset= 0x49}}},
+      {{0x4a, 0x4a, 0x3a}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset= 0x4a}}},
+      {{0x4b, 0x4b, 0x3b}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset= 0x4b}}},
+      {{0x4c, 0x4c, 0x3c}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_si}, {.as_offset= 0x4c}}},
+      {{0x4d, 0x4d, 0x3d}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_di}, {.as_offset= 0x4d}}},
+      {{0x4e, 0x4e, 0x3e}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp}, {.as_offset= 0x4e}}},
+      {{0x4f, 0x4f, 0x3f}, {mod_rm_mod_byte, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx}, {.as_offset= 0x4f}}},
 
-      {{0x50, 0x50, 0x40}, {mrrm_mod_byte, DX, mrrm_rm_bx_si, 0x50}},
-      {{0x51, 0x51, 0x41}, {mrrm_mod_byte, DX, mrrm_rm_bx_di, 0x51}},
-      {{0x52, 0x52, 0x42}, {mrrm_mod_byte, DX, mrrm_rm_bp_si, 0x52}},
-      {{0x53, 0x53, 0x43}, {mrrm_mod_byte, DX, mrrm_rm_bp_di, 0x53}},
-      {{0x54, 0x54, 0x44}, {mrrm_mod_byte, DX, mrrm_rm_si, 0x54}},
-      {{0x55, 0x55, 0x45}, {mrrm_mod_byte, DX, mrrm_rm_di, 0x55}},
-      {{0x56, 0x56, 0x46}, {mrrm_mod_byte, DX, mrrm_rm_bp, 0x56}},
-      {{0x57, 0x57, 0x47}, {mrrm_mod_byte, DX, mrrm_rm_bx, 0x57}},
-      {{0x58, 0x58, 0x48}, {mrrm_mod_byte, BX, mrrm_rm_bx_si, 0x58}},
-      {{0x59, 0x59, 0x49}, {mrrm_mod_byte, BX, mrrm_rm_bx_di, 0x59}},
-      {{0x5a, 0x5a, 0x4a}, {mrrm_mod_byte, BX, mrrm_rm_bp_si, 0x5a}},
-      {{0x5b, 0x5b, 0x4b}, {mrrm_mod_byte, BX, mrrm_rm_bp_di, 0x5b}},
-      {{0x5c, 0x5c, 0x4c}, {mrrm_mod_byte, BX, mrrm_rm_si, 0x5c}},
-      {{0x5d, 0x5d, 0x4d}, {mrrm_mod_byte, BX, mrrm_rm_di, 0x5d}},
-      {{0x5e, 0x5e, 0x4e}, {mrrm_mod_byte, BX, mrrm_rm_bp, 0x5e}},
-      {{0x5f, 0x5f, 0x4f}, {mrrm_mod_byte, BX, mrrm_rm_bx, 0x5f}},
+      {{0x50, 0x50, 0x40}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x50}}},
+      {{0x51, 0x51, 0x41}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x51}}},
+      {{0x52, 0x52, 0x42}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x52}}},
+      {{0x53, 0x53, 0x43}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x53}}},
+      {{0x54, 0x54, 0x44}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x54}}},
+      {{0x55, 0x55, 0x45}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x55}}},
+      {{0x56, 0x56, 0x46}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x56}}},
+      {{0x57, 0x57, 0x47}, {mod_rm_mod_byte, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x57}}},
+      {{0x58, 0x58, 0x48}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x58}}},
+      {{0x59, 0x59, 0x49}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x59}}},
+      {{0x5a, 0x5a, 0x4a}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x5a}}},
+      {{0x5b, 0x5b, 0x4b}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x5b}}},
+      {{0x5c, 0x5c, 0x4c}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x5c}}},
+      {{0x5d, 0x5d, 0x4d}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x5d}}},
+      {{0x5e, 0x5e, 0x4e}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x5e}}},
+      {{0x5f, 0x5f, 0x4f}, {mod_rm_mod_byte, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x5f}}},
 
-      {{0x60, 0x60, 0x50}, {mrrm_mod_byte, BP, mrrm_rm_bx_si, 0x60}},
-      {{0x61, 0x61, 0x51}, {mrrm_mod_byte, BP, mrrm_rm_bx_di, 0x61}},
-      {{0x62, 0x62, 0x52}, {mrrm_mod_byte, BP, mrrm_rm_bp_si, 0x62}},
-      {{0x63, 0x63, 0x53}, {mrrm_mod_byte, BP, mrrm_rm_bp_di, 0x63}},
-      {{0x64, 0x64, 0x54}, {mrrm_mod_byte, BP, mrrm_rm_si, 0x64}},
-      {{0x65, 0x65, 0x55}, {mrrm_mod_byte, BP, mrrm_rm_di, 0x65}},
-      {{0x66, 0x66, 0x56}, {mrrm_mod_byte, BP, mrrm_rm_bp, 0x66}},
-      {{0x67, 0x67, 0x57}, {mrrm_mod_byte, BP, mrrm_rm_bx, 0x67}},
-      {{0x68, 0x68, 0x58}, {mrrm_mod_byte, SP, mrrm_rm_bx_si, 0x68}},
-      {{0x69, 0x69, 0x59}, {mrrm_mod_byte, SP, mrrm_rm_bx_di, 0x69}},
-      {{0x6a, 0x6a, 0x5a}, {mrrm_mod_byte, SP, mrrm_rm_bp_si, 0x6a}},
-      {{0x6b, 0x6b, 0x5b}, {mrrm_mod_byte, SP, mrrm_rm_bp_di, 0x6b}},
-      {{0x6c, 0x6c, 0x5c}, {mrrm_mod_byte, SP, mrrm_rm_si, 0x6c}},
-      {{0x6d, 0x6d, 0x5d}, {mrrm_mod_byte, SP, mrrm_rm_di, 0x6d}},
-      {{0x6e, 0x6e, 0x5e}, {mrrm_mod_byte, SP, mrrm_rm_bp, 0x6e}},
-      {{0x6f, 0x6f, 0x5f}, {mrrm_mod_byte, SP, mrrm_rm_bx, 0x6f}},
+      {{0x60, 0x60, 0x50}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x60}}},
+      {{0x61, 0x61, 0x51}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x61}}},
+      {{0x62, 0x62, 0x52}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x62}}},
+      {{0x63, 0x63, 0x53}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x63}}},
+      {{0x64, 0x64, 0x54}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x64}}},
+      {{0x65, 0x65, 0x55}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x65}}},
+      {{0x66, 0x66, 0x56}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x66}}},
+      {{0x67, 0x67, 0x57}, {mod_rm_mod_byte, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x67}}},
+      {{0x68, 0x68, 0x58}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x68}}},
+      {{0x69, 0x69, 0x59}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x69}}},
+      {{0x6a, 0x6a, 0x5a}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x6a}}},
+      {{0x6b, 0x6b, 0x5b}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x6b}}},
+      {{0x6c, 0x6c, 0x5c}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x6c}}},
+      {{0x6d, 0x6d, 0x5d}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x6d}}},
+      {{0x6e, 0x6e, 0x5e}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x6e}}},
+      {{0x6f, 0x6f, 0x5f}, {mod_rm_mod_byte, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x6f}}},
 
-      {{0x70, 0x70, 0x60}, {mrrm_mod_byte, SI, mrrm_rm_bx_si, 0x70}},
-      {{0x71, 0x71, 0x61}, {mrrm_mod_byte, SI, mrrm_rm_bx_di, 0x71}},
-      {{0x72, 0x72, 0x62}, {mrrm_mod_byte, SI, mrrm_rm_bp_si, 0x72}},
-      {{0x73, 0x73, 0x63}, {mrrm_mod_byte, SI, mrrm_rm_bp_di, 0x73}},
-      {{0x74, 0x74, 0x64}, {mrrm_mod_byte, SI, mrrm_rm_si, 0x74}},
-      {{0x75, 0x75, 0x65}, {mrrm_mod_byte, SI, mrrm_rm_di, 0x75}},
-      {{0x76, 0x76, 0x66}, {mrrm_mod_byte, SI, mrrm_rm_bp, 0x76}},
-      {{0x77, 0x77, 0x67}, {mrrm_mod_byte, SI, mrrm_rm_bx, 0x77}},
-      {{0x78, 0x78, 0x68}, {mrrm_mod_byte, DI, mrrm_rm_bx_si, 0x78}},
-      {{0x79, 0x79, 0x69}, {mrrm_mod_byte, DI, mrrm_rm_bx_di, 0x79}},
-      {{0x7a, 0x7a, 0x6a}, {mrrm_mod_byte, DI, mrrm_rm_bp_si, 0x7a}},
-      {{0x7b, 0x7b, 0x6b}, {mrrm_mod_byte, DI, mrrm_rm_bp_di, 0x7b}},
-      {{0x7c, 0x7c, 0x6c}, {mrrm_mod_byte, DI, mrrm_rm_si, 0x7c}},
-      {{0x7d, 0x7d, 0x6d}, {mrrm_mod_byte, DI, mrrm_rm_di, 0x7d}},
-      {{0x7e, 0x7e, 0x6e}, {mrrm_mod_byte, DI, mrrm_rm_bp, 0x7e}},
-      {{0x7f, 0x7f, 0x6f}, {mrrm_mod_byte, DI, mrrm_rm_bx, 0x7f}},
+      {{0x70, 0x70, 0x60}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x70}}},
+      {{0x71, 0x71, 0x61}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x71}}},
+      {{0x72, 0x72, 0x62}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x72}}},
+      {{0x73, 0x73, 0x63}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x73}}},
+      {{0x74, 0x74, 0x64}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x74}}},
+      {{0x75, 0x75, 0x65}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x75}}},
+      {{0x76, 0x76, 0x66}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x76}}},
+      {{0x77, 0x77, 0x67}, {mod_rm_mod_byte, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x77}}},
+      {{0x78, 0x78, 0x68}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x78}}},
+      {{0x79, 0x79, 0x69}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x79}}},
+      {{0x7a, 0x7a, 0x6a}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x7a}}},
+      {{0x7b, 0x7b, 0x6b}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x7b}}},
+      {{0x7c, 0x7c, 0x6c}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x7c}}},
+      {{0x7d, 0x7d, 0x6d}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x7d}}},
+      {{0x7e, 0x7e, 0x6e}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x7e}}},
+      {{0x7f, 0x7f, 0x6f}, {mod_rm_mod_byte, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x7f}}},
 
-      {{0x80, 0x80, 0x70}, {mrrm_mod_word, AX, mrrm_rm_bx_si, 0x7080}},
-      {{0x81, 0x81, 0x71}, {mrrm_mod_word, AX, mrrm_rm_bx_di, 0x7181}},
-      {{0x82, 0x82, 0x72}, {mrrm_mod_word, AX, mrrm_rm_bp_si, 0x7282}},
-      {{0x83, 0x83, 0x73}, {mrrm_mod_word, AX, mrrm_rm_bp_di, 0x7383}},
-      {{0x84, 0x84, 0x74}, {mrrm_mod_word, AX, mrrm_rm_si, 0x7484}},
-      {{0x85, 0x85, 0x75}, {mrrm_mod_word, AX, mrrm_rm_di, 0x7585}},
-      {{0x86, 0x86, 0x76}, {mrrm_mod_word, AX, mrrm_rm_bp, 0x7686}},
-      {{0x87, 0x87, 0x77}, {mrrm_mod_word, AX, mrrm_rm_bx, 0x7787}},
-      {{0x88, 0x88, 0x78}, {mrrm_mod_word, CX, mrrm_rm_bx_si, 0x7888}},
-      {{0x89, 0x89, 0x79}, {mrrm_mod_word, CX, mrrm_rm_bx_di, 0x7989}},
-      {{0x8a, 0x8a, 0x7a}, {mrrm_mod_word, CX, mrrm_rm_bp_si, 0x7a8a}},
-      {{0x8b, 0x8b, 0x7b}, {mrrm_mod_word, CX, mrrm_rm_bp_di, 0x7b8b}},
-      {{0x8c, 0x8c, 0x7c}, {mrrm_mod_word, CX, mrrm_rm_si, 0x7c8c}},
-      {{0x8d, 0x8d, 0x7d}, {mrrm_mod_word, CX, mrrm_rm_di, 0x7d8d}},
-      {{0x8e, 0x8e, 0x7e}, {mrrm_mod_word, CX, mrrm_rm_bp, 0x7e8e}},
-      {{0x8f, 0x8f, 0x7f}, {mrrm_mod_word, CX, mrrm_rm_bx, 0x7f8f}},
+      {{0x80, 0x80, 0x70}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x7080}}},
+      {{0x81, 0x81, 0x71}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x7181}}},
+      {{0x82, 0x82, 0x72}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x7282}}},
+      {{0x83, 0x83, 0x73}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x7383}}},
+      {{0x84, 0x84, 0x74}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x7484}}},
+      {{0x85, 0x85, 0x75}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x7585}}},
+      {{0x86, 0x86, 0x76}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x7686}}},
+      {{0x87, 0x87, 0x77}, {mod_rm_mod_word, mod_rm_reg_al_ax, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x7787}}},
+      {{0x88, 0x88, 0x78}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x7888}}},
+      {{0x89, 0x89, 0x79}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x7989}}},
+      {{0x8a, 0x8a, 0x7a}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x7a8a}}},
+      {{0x8b, 0x8b, 0x7b}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x7b8b}}},
+      {{0x8c, 0x8c, 0x7c}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x7c8c}}},
+      {{0x8d, 0x8d, 0x7d}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x7d8d}}},
+      {{0x8e, 0x8e, 0x7e}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x7e8e}}},
+      {{0x8f, 0x8f, 0x7f}, {mod_rm_mod_word, mod_rm_reg_cl_cx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x7f8f}}},
 
-      {{0x90, 0x90, 0x80}, {mrrm_mod_word, DX, mrrm_rm_bx_si, 0x8090}},
-      {{0x91, 0x91, 0x81}, {mrrm_mod_word, DX, mrrm_rm_bx_di, 0x8191}},
-      {{0x92, 0x92, 0x82}, {mrrm_mod_word, DX, mrrm_rm_bp_si, 0x8292}},
-      {{0x93, 0x93, 0x83}, {mrrm_mod_word, DX, mrrm_rm_bp_di, 0x8393}},
-      {{0x94, 0x94, 0x84}, {mrrm_mod_word, DX, mrrm_rm_si, 0x8494}},
-      {{0x95, 0x95, 0x85}, {mrrm_mod_word, DX, mrrm_rm_di, 0x8595}},
-      {{0x96, 0x96, 0x86}, {mrrm_mod_word, DX, mrrm_rm_bp, 0x8696}},
-      {{0x97, 0x97, 0x87}, {mrrm_mod_word, DX, mrrm_rm_bx, 0x8797}},
-      {{0x98, 0x98, 0x88}, {mrrm_mod_word, BX, mrrm_rm_bx_si, 0x8898}},
-      {{0x99, 0x99, 0x89}, {mrrm_mod_word, BX, mrrm_rm_bx_di, 0x8999}},
-      {{0x9a, 0x9a, 0x8a}, {mrrm_mod_word, BX, mrrm_rm_bp_si, 0x8a9a}},
-      {{0x9b, 0x9b, 0x8b}, {mrrm_mod_word, BX, mrrm_rm_bp_di, 0x8b9b}},
-      {{0x9c, 0x9c, 0x8c}, {mrrm_mod_word, BX, mrrm_rm_si, 0x8c9c}},
-      {{0x9d, 0x9d, 0x8d}, {mrrm_mod_word, BX, mrrm_rm_di, 0x8d9d}},
-      {{0x9e, 0x9e, 0x8e}, {mrrm_mod_word, BX, mrrm_rm_bp, 0x8e9e}},
-      {{0x9f, 0x9f, 0x8f}, {mrrm_mod_word, BX, mrrm_rm_bx, 0x8f9f}},
+      {{0x90, 0x90, 0x80}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x8090}}},
+      {{0x91, 0x91, 0x81}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x8191}}},
+      {{0x92, 0x92, 0x82}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x8292}}},
+      {{0x93, 0x93, 0x83}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x8393}}},
+      {{0x94, 0x94, 0x84}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x8494}}},
+      {{0x95, 0x95, 0x85}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x8595}}},
+      {{0x96, 0x96, 0x86}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x8696}}},
+      {{0x97, 0x97, 0x87}, {mod_rm_mod_word, mod_rm_reg_dl_dx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x8797}}},
+      {{0x98, 0x98, 0x88}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x8898}}},
+      {{0x99, 0x99, 0x89}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x8999}}},
+      {{0x9a, 0x9a, 0x8a}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x8a9a}}},
+      {{0x9b, 0x9b, 0x8b}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x8b9b}}},
+      {{0x9c, 0x9c, 0x8c}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x8c9c}}},
+      {{0x9d, 0x9d, 0x8d}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x8d9d}}},
+      {{0x9e, 0x9e, 0x8e}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x8e9e}}},
+      {{0x9f, 0x9f, 0x8f}, {mod_rm_mod_word, mod_rm_reg_bl_bx, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x8f9f}}},
 
-      {{0xa0, 0xa0, 0x90}, {mrrm_mod_word, BP, mrrm_rm_bx_si, 0x90a0}},
-      {{0xa1, 0xa1, 0x91}, {mrrm_mod_word, BP, mrrm_rm_bx_di, 0x91a1}},
-      {{0xa2, 0xa2, 0x92}, {mrrm_mod_word, BP, mrrm_rm_bp_si, 0x92a2}},
-      {{0xa3, 0xa3, 0x93}, {mrrm_mod_word, BP, mrrm_rm_bp_di, 0x93a3}},
-      {{0xa4, 0xa4, 0x94}, {mrrm_mod_word, BP, mrrm_rm_si, 0x94a4}},
-      {{0xa5, 0xa5, 0x95}, {mrrm_mod_word, BP, mrrm_rm_di, 0x95a5}},
-      {{0xa6, 0xa6, 0x96}, {mrrm_mod_word, BP, mrrm_rm_bp, 0x96a6}},
-      {{0xa7, 0xa7, 0x97}, {mrrm_mod_word, BP, mrrm_rm_bx, 0x97a7}},
-      {{0xa8, 0xa8, 0x98}, {mrrm_mod_word, SP, mrrm_rm_bx_si, 0x98a8}},
-      {{0xa9, 0xa9, 0x99}, {mrrm_mod_word, SP, mrrm_rm_bx_di, 0x99a9}},
-      {{0xaa, 0xaa, 0x9a}, {mrrm_mod_word, SP, mrrm_rm_bp_si, 0x9aaa}},
-      {{0xab, 0xab, 0x9b}, {mrrm_mod_word, SP, mrrm_rm_bp_di, 0x9bab}},
-      {{0xac, 0xac, 0x9c}, {mrrm_mod_word, SP, mrrm_rm_si, 0x9cac}},
-      {{0xad, 0xad, 0x9d}, {mrrm_mod_word, SP, mrrm_rm_di, 0x9dad}},
-      {{0xae, 0xae, 0x9e}, {mrrm_mod_word, SP, mrrm_rm_bp, 0x9eae}},
-      {{0xaf, 0xaf, 0x9f}, {mrrm_mod_word, SP, mrrm_rm_bx, 0x9faf}},
+      {{0xa0, 0xa0, 0x90}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x90a0}}},
+      {{0xa1, 0xa1, 0x91}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x91a1}}},
+      {{0xa2, 0xa2, 0x92}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x92a2}}},
+      {{0xa3, 0xa3, 0x93}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x93a3}}},
+      {{0xa4, 0xa4, 0x94}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x94a4}}},
+      {{0xa5, 0xa5, 0x95}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x95a5}}},
+      {{0xa6, 0xa6, 0x96}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x96a6}}},
+      {{0xa7, 0xa7, 0x97}, {mod_rm_mod_word, mod_rm_reg_ah_sp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x97a7}}},
+      {{0xa8, 0xa8, 0x98}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0x98a8}}},
+      {{0xa9, 0xa9, 0x99}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0x99a9}}},
+      {{0xaa, 0xaa, 0x9a}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0x9aaa}}},
+      {{0xab, 0xab, 0x9b}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0x9bab}}},
+      {{0xac, 0xac, 0x9c}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_si}, {.as_offset = 0x9cac}}},
+      {{0xad, 0xad, 0x9d}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_di}, {.as_offset = 0x9dad}}},
+      {{0xae, 0xae, 0x9e}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0x9eae}}},
+      {{0xaf, 0xaf, 0x9f}, {mod_rm_mod_word, mod_rm_reg_ch_bp, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0x9faf}}},
 
-      {{0xb0, 0xb0, 0xa0}, {mrrm_mod_word, SI, mrrm_rm_bx_si, 0xa0b0}},
-      {{0xb1, 0xb1, 0xa1}, {mrrm_mod_word, SI, mrrm_rm_bx_di, 0xa1b1}},
-      {{0xb2, 0xb2, 0xa2}, {mrrm_mod_word, SI, mrrm_rm_bp_si, 0xa2b2}},
-      {{0xb3, 0xb3, 0xa3}, {mrrm_mod_word, SI, mrrm_rm_bp_di, 0xa3b3}},
-      {{0xb4, 0xb4, 0xa4}, {mrrm_mod_word, SI, mrrm_rm_si, 0xa4b4}},
-      {{0xb5, 0xb5, 0xa5}, {mrrm_mod_word, SI, mrrm_rm_di, 0xa5b5}},
-      {{0xb6, 0xb6, 0xa6}, {mrrm_mod_word, SI, mrrm_rm_bp, 0xa6b6}},
-      {{0xb7, 0xb7, 0xa7}, {mrrm_mod_word, SI, mrrm_rm_bx, 0xa7b7}},
-      {{0xb8, 0xb8, 0xa8}, {mrrm_mod_word, DI, mrrm_rm_bx_si, 0xa8b8}},
-      {{0xb9, 0xb9, 0xa9}, {mrrm_mod_word, DI, mrrm_rm_bx_di, 0xa9b9}},
-      {{0xba, 0xba, 0xaa}, {mrrm_mod_word, DI, mrrm_rm_bp_si, 0xaaba}},
-      {{0xbb, 0xbb, 0xab}, {mrrm_mod_word, DI, mrrm_rm_bp_di, 0xabbb}},
-      {{0xbc, 0xbc, 0xac}, {mrrm_mod_word, DI, mrrm_rm_si, 0xacbc}},
-      {{0xbd, 0xbd, 0xad}, {mrrm_mod_word, DI, mrrm_rm_di, 0xadbd}},
-      {{0xbe, 0xbe, 0xae}, {mrrm_mod_word, DI, mrrm_rm_bp, 0xaebe}},
-      {{0xbf, 0xbf, 0xaf}, {mrrm_mod_word, DI, mrrm_rm_bx, 0xafbf}},
+      {{0xb0, 0xb0, 0xa0}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0xa0b0}}},
+      {{0xb1, 0xb1, 0xa1}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0xa1b1}}},
+      {{0xb2, 0xb2, 0xa2}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0xa2b2}}},
+      {{0xb3, 0xb3, 0xa3}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0xa3b3}}},
+      {{0xb4, 0xb4, 0xa4}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_si}, {.as_offset = 0xa4b4}}},
+      {{0xb5, 0xb5, 0xa5}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_di}, {.as_offset = 0xa5b5}}},
+      {{0xb6, 0xb6, 0xa6}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0xa6b6}}},
+      {{0xb7, 0xb7, 0xa7}, {mod_rm_mod_word, mod_rm_reg_dh_si, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0xa7b7}}},
+      {{0xb8, 0xb8, 0xa8}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_si}, {.as_offset = 0xa8b8}}},
+      {{0xb9, 0xb9, 0xa9}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx_di}, {.as_offset = 0xa9b9}}},
+      {{0xba, 0xba, 0xaa}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_si}, {.as_offset = 0xaaba}}},
+      {{0xbb, 0xbb, 0xab}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp_di}, {.as_offset = 0xabbb}}},
+      {{0xbc, 0xbc, 0xac}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_si}, {.as_offset = 0xacbc}}},
+      {{0xbd, 0xbd, 0xad}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_di}, {.as_offset = 0xadbd}}},
+      {{0xbe, 0xbe, 0xae}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bp}, {.as_offset = 0xaebe}}},
+      {{0xbf, 0xbf, 0xaf}, {mod_rm_mod_word, mod_rm_reg_bh_di, {.as_mem = mod_rm_mem_bx}, {.as_offset = 0xafbf}}},
 
-      {{0xc0, 0xc0, 0xb0}, {mrrm_mod_register, AX, AX, 0}},
-      {{0xc1, 0xc1, 0xb1}, {mrrm_mod_register, AX, CX, 0}},
-      {{0xc2, 0xc2, 0xb2}, {mrrm_mod_register, AX, DX, 0}},
-      {{0xc3, 0xc3, 0xb3}, {mrrm_mod_register, AX, BX, 0}},
-      {{0xc4, 0xc4, 0xb4}, {mrrm_mod_register, AX, BP, 0}},
-      {{0xc5, 0xc5, 0xb5}, {mrrm_mod_register, AX, SP, 0}},
-      {{0xc6, 0xc6, 0xb6}, {mrrm_mod_register, AX, SI, 0}},
-      {{0xc7, 0xc7, 0xb7}, {mrrm_mod_register, AX, DI, 0}},
-      {{0xc8, 0xc8, 0xb8}, {mrrm_mod_register, CX, AX, 0}},
-      {{0xc9, 0xc9, 0xb9}, {mrrm_mod_register, CX, CX, 0}},
-      {{0xca, 0xca, 0xba}, {mrrm_mod_register, CX, DX, 0}},
-      {{0xcb, 0xcb, 0xbb}, {mrrm_mod_register, CX, BX, 0}},
-      {{0xcc, 0xcc, 0xbc}, {mrrm_mod_register, CX, BP, 0}},
-      {{0xcd, 0xcd, 0xbd}, {mrrm_mod_register, CX, SP, 0}},
-      {{0xce, 0xce, 0xbe}, {mrrm_mod_register, CX, SI, 0}},
-      {{0xcf, 0xcf, 0xbf}, {mrrm_mod_register, CX, DI, 0}},
+      {{0xc0, 0xc0, 0xb0}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xc1, 0xc1, 0xb1}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xc2, 0xc2, 0xb2}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xc3, 0xc3, 0xb3}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xc4, 0xc4, 0xb4}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xc5, 0xc5, 0xb5}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xc6, 0xc6, 0xb6}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xc7, 0xc7, 0xb7}, {mod_rm_mod_register, mod_rm_reg_al_ax, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
+      {{0xc8, 0xc8, 0xb8}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xc9, 0xc9, 0xb9}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xca, 0xca, 0xba}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xcb, 0xcb, 0xbb}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xcc, 0xcc, 0xbc}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xcd, 0xcd, 0xbd}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xce, 0xce, 0xbe}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xcf, 0xcf, 0xbf}, {mod_rm_mod_register, mod_rm_reg_cl_cx, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
 
-      {{0xd0, 0xd0, 0xc0}, {mrrm_mod_register, DX, AX, 0}},
-      {{0xd1, 0xd1, 0xc1}, {mrrm_mod_register, DX, CX, 0}},
-      {{0xd2, 0xd2, 0xc2}, {mrrm_mod_register, DX, DX, 0}},
-      {{0xd3, 0xd3, 0xc3}, {mrrm_mod_register, DX, BX, 0}},
-      {{0xd4, 0xd4, 0xc4}, {mrrm_mod_register, DX, BP, 0}},
-      {{0xd5, 0xd5, 0xc5}, {mrrm_mod_register, DX, SP, 0}},
-      {{0xd6, 0xd6, 0xc6}, {mrrm_mod_register, DX, SI, 0}},
-      {{0xd7, 0xd7, 0xc7}, {mrrm_mod_register, DX, DI, 0}},
-      {{0xd8, 0xd8, 0xc8}, {mrrm_mod_register, BX, AX, 0}},
-      {{0xd9, 0xd9, 0xc9}, {mrrm_mod_register, BX, CX, 0}},
-      {{0xda, 0xda, 0xca}, {mrrm_mod_register, BX, DX, 0}},
-      {{0xdb, 0xdb, 0xcb}, {mrrm_mod_register, BX, BX, 0}},
-      {{0xdc, 0xdc, 0xcc}, {mrrm_mod_register, BX, BP, 0}},
-      {{0xdd, 0xdd, 0xcd}, {mrrm_mod_register, BX, SP, 0}},
-      {{0xde, 0xde, 0xce}, {mrrm_mod_register, BX, SI, 0}},
-      {{0xdf, 0xdf, 0xcf}, {mrrm_mod_register, BX, DI, 0}},
+      {{0xd0, 0xd0, 0xc0}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xd1, 0xd1, 0xc1}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xd2, 0xd2, 0xc2}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xd3, 0xd3, 0xc3}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xd4, 0xd4, 0xc4}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xd5, 0xd5, 0xc5}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xd6, 0xd6, 0xc6}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xd7, 0xd7, 0xc7}, {mod_rm_mod_register, mod_rm_reg_dl_dx, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
+      {{0xd8, 0xd8, 0xc8}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xd9, 0xd9, 0xc9}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xda, 0xda, 0xca}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xdb, 0xdb, 0xcb}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xdc, 0xdc, 0xcc}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xdd, 0xdd, 0xcd}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xde, 0xde, 0xce}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xdf, 0xdf, 0xcf}, {mod_rm_mod_register, mod_rm_reg_bl_bx, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
 
-      {{0xe0, 0xe0, 0xd0}, {mrrm_mod_register, BP, AX, 0}},
-      {{0xe1, 0xe1, 0xd1}, {mrrm_mod_register, BP, CX, 0}},
-      {{0xe2, 0xe2, 0xd2}, {mrrm_mod_register, BP, DX, 0}},
-      {{0xe3, 0xe3, 0xd3}, {mrrm_mod_register, BP, BX, 0}},
-      {{0xe4, 0xe4, 0xd4}, {mrrm_mod_register, BP, BP, 0}},
-      {{0xe5, 0xe5, 0xd5}, {mrrm_mod_register, BP, SP, 0}},
-      {{0xe6, 0xe6, 0xd6}, {mrrm_mod_register, BP, SI, 0}},
-      {{0xe7, 0xe7, 0xd7}, {mrrm_mod_register, BP, DI, 0}},
-      {{0xe8, 0xe8, 0xd8}, {mrrm_mod_register, SP, AX, 0}},
-      {{0xe9, 0xe9, 0xd9}, {mrrm_mod_register, SP, CX, 0}},
-      {{0xea, 0xea, 0xda}, {mrrm_mod_register, SP, DX, 0}},
-      {{0xeb, 0xeb, 0xdb}, {mrrm_mod_register, SP, BX, 0}},
-      {{0xec, 0xec, 0xdc}, {mrrm_mod_register, SP, BP, 0}},
-      {{0xed, 0xed, 0xdd}, {mrrm_mod_register, SP, SP, 0}},
-      {{0xee, 0xee, 0xde}, {mrrm_mod_register, SP, SI, 0}},
-      {{0xef, 0xef, 0xdf}, {mrrm_mod_register, SP, DI, 0}},
+      {{0xe0, 0xe0, 0xd0}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xe1, 0xe1, 0xd1}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xe2, 0xe2, 0xd2}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xe3, 0xe3, 0xd3}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xe4, 0xe4, 0xd4}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xe5, 0xe5, 0xd5}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xe6, 0xe6, 0xd6}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xe7, 0xe7, 0xd7}, {mod_rm_mod_register, mod_rm_reg_ah_sp, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
+      {{0xe8, 0xe8, 0xd8}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xe9, 0xe9, 0xd9}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xea, 0xea, 0xda}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xeb, 0xeb, 0xdb}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xec, 0xec, 0xdc}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xed, 0xed, 0xdd}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xee, 0xee, 0xde}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xef, 0xef, 0xdf}, {mod_rm_mod_register, mod_rm_reg_ch_bp, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
 
-      {{0xf0, 0xf0, 0xe0}, {mrrm_mod_register, SI, AX, 0}},
-      {{0xf1, 0xf1, 0xe1}, {mrrm_mod_register, SI, CX, 0}},
-      {{0xf2, 0xf2, 0xe2}, {mrrm_mod_register, SI, DX, 0}},
-      {{0xf3, 0xf3, 0xe3}, {mrrm_mod_register, SI, BX, 0}},
-      {{0xf4, 0xf4, 0xe4}, {mrrm_mod_register, SI, BP, 0}},
-      {{0xf5, 0xf5, 0xe5}, {mrrm_mod_register, SI, SP, 0}},
-      {{0xf6, 0xf6, 0xe6}, {mrrm_mod_register, SI, SI, 0}},
-      {{0xf7, 0xf7, 0xe7}, {mrrm_mod_register, SI, DI, 0}},
-      {{0xf8, 0xf8, 0xe8}, {mrrm_mod_register, DI, AX, 0}},
-      {{0xf9, 0xf9, 0xe9}, {mrrm_mod_register, DI, CX, 0}},
-      {{0xfa, 0xfa, 0xea}, {mrrm_mod_register, DI, DX, 0}},
-      {{0xfb, 0xfb, 0xeb}, {mrrm_mod_register, DI, BX, 0}},
-      {{0xfc, 0xfc, 0xec}, {mrrm_mod_register, DI, BP, 0}},
-      {{0xfd, 0xfd, 0xed}, {mrrm_mod_register, DI, SP, 0}},
-      {{0xfe, 0xfe, 0xee}, {mrrm_mod_register, DI, SI, 0}},
-      {{0xff, 0xff, 0xef}, {mrrm_mod_register, DI, DI, 0}},
+      {{0xf0, 0xf0, 0xe0}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xf1, 0xf1, 0xe1}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xf2, 0xf2, 0xe2}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xf3, 0xf3, 0xe3}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xf4, 0xf4, 0xe4}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xf5, 0xf5, 0xe5}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xf6, 0xf6, 0xe6}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xf7, 0xf7, 0xe7}, {mod_rm_mod_register, mod_rm_reg_dh_si, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
+      {{0xf8, 0xf8, 0xe8}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_al_ax}, {.as_offset= 0}}},
+      {{0xf9, 0xf9, 0xe9}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_cl_cx}, {.as_offset= 0}}},
+      {{0xfa, 0xfa, 0xea}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_dl_dx}, {.as_offset= 0}}},
+      {{0xfb, 0xfb, 0xeb}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_bl_bx}, {.as_offset= 0}}},
+      {{0xfc, 0xfc, 0xec}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_ah_sp}, {.as_offset= 0}}},
+      {{0xfd, 0xfd, 0xed}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_ch_bp}, {.as_offset= 0}}},
+      {{0xfe, 0xfe, 0xee}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_dh_si}, {.as_offset= 0}}},
+      {{0xff, 0xff, 0xef}, {mod_rm_mod_register, mod_rm_reg_bh_di, {.as_reg = mod_rm_reg_bh_di}, {.as_offset= 0}}},
   };
 
   for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
@@ -406,63 +392,62 @@ void test_fetch_mod_reg_rm(void) {
 
     testing_dummy_cpu_init(&cpu, &bus, tests[i].buffer, 6);
 
-    struct mod_reg_rm mrr = fetch_mod_reg_rm(&cpu);
-    EXPECT_U8_EQ(tests[i].result.mod, mrr.mod);
-    EXPECT_U8_EQ(tests[i].result.mod, mrr.mod);
-    EXPECT_U8_EQ(tests[i].result.reg, mrr.reg);
-    EXPECT_U8_EQ(tests[i].result.rm, mrr.rm);
-    EXPECT_I16_EQ(tests[i].result.disp, mrr.disp);
+    struct mod_rm mrm = fetch_mod_rm(&cpu);
+    EXPECT_U8_EQ(tests[i].result.mod, mrm.mod);
+    EXPECT_U8_EQ(tests[i].result.reg, mrm.reg);
+    EXPECT_U8_EQ(tests[i].result.reg_mem.as_mem, mrm.reg_mem.as_mem);
+    EXPECT_I16_EQ(tests[i].result.displacement.as_offset, mrm.displacement.as_offset);
 
     testing_dummy_cpu_destroy(&bus);
   }
 }
 #endif
 
-static u16 calc_mod_reg_rm_addr(struct cpu *cpu, struct mod_reg_rm mrr) {
+static u16 calc_mod_reg_rm_addr(struct cpu *cpu, struct mod_rm mrm) {
   // Can not calculate the address for a register.
-  assert(mrr.mod != mrrm_mod_register);
+  assert(mrm.mod != mod_rm_mod_register);
 
   // Indirect addressing on register BP is handled as a 16-bit displacement.
-  if (mrr.mod == mrrm_mod_indirect && mrr.rm == 0x06) {
-    return mrr.disp;
+  if (mrm.mod == mod_rm_mod_indirect && mrm.reg_mem.as_mem == mod_rm_mem_bp) {
+    return mrm.displacement.as_address;
   }
 
 #if !defined(NDEBUG)
   // Indirect mode should not have a displacement, except for the case above.
-  if (mrr.mod == mrrm_mod_indirect) {
-    assert(mrr.disp == 0);
+  if (mrm.mod == mod_rm_mod_indirect) {
+    assert(mrm.displacement.as_offset == 0);
   }
 
   // Check the bounds for the 8-bit displacement.
-  if (mrr.mod == mrrm_mod_byte) {
-    assert((mrr.disp & 0xff00) == 0);
+  if (mrm.mod == mod_rm_mod_byte) {
+    assert((mrm.displacement.as_offset & 0xff00) == 0);
   }
 #endif
 
-  switch (mrr.rm) {
-    case mrrm_rm_bx_si:
-      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[SI] + mrr.disp;
+  switch (mrm.reg_mem.as_mem) {
+    case mod_rm_mem_bx_si:
+      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[SI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_bx_di:
-      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[DI] + mrr.disp;
+    case mod_rm_mem_bx_di:
+      return cpu->regs.reg_16[BX] + cpu->regs.reg_16[DI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_bp_si:
-      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[SI] + mrr.disp;
+    case mod_rm_mem_bp_si:
+      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[SI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_bp_di:
-      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[DI] + mrr.disp;
+    case mod_rm_mem_bp_di:
+      return cpu->regs.reg_16[BP] + cpu->regs.reg_16[DI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_si:
-      return cpu->regs.reg_16[SI] + mrr.disp;
+    case mod_rm_mem_si:
+      return cpu->regs.reg_16[SI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_di:
-      return cpu->regs.reg_16[DI] + mrr.disp;
+    case mod_rm_mem_di:
+      return cpu->regs.reg_16[DI] + mrm.displacement.as_offset;
 
-    case mrrm_rm_bp:
-      return cpu->regs.reg_16[BP] + mrr.disp;
+    case mod_rm_mem_bp:
+      return cpu->regs.reg_16[BP] + mrm.displacement.as_offset;
 
-    case mrrm_rm_bx:
-      return cpu->regs.reg_16[BX] + mrr.disp;
+    case mod_rm_mem_bx:
+      return cpu->regs.reg_16[BX] + mrm.displacement.as_offset;
 
     default:
       assert(0);
@@ -473,35 +458,35 @@ static u16 calc_mod_reg_rm_addr(struct cpu *cpu, struct mod_reg_rm mrr) {
 #if defined(TESTING)
 void test_calc_mod_reg_rm_addr(void) {
   static struct {
-    struct mod_reg_rm input;
+    struct mod_rm input;
     u16 result;
   } tests[] = {
-      {{mrrm_mod_indirect, 0, mrrm_rm_bx_si, 0x0000}, 0x1214},
-      {{mrrm_mod_indirect, 0, mrrm_rm_bx_di, 0x0000}, 0x1416},
-      {{mrrm_mod_indirect, 0, mrrm_rm_bp_si, 0x0000}, 0x1416},
-      {{mrrm_mod_indirect, 0, mrrm_rm_bp_di, 0x0000}, 0x1618},
-      {{mrrm_mod_indirect, 0, mrrm_rm_si, 0x0000}, 0x0c0d},
-      {{mrrm_mod_indirect, 0, mrrm_rm_di, 0x0000}, 0x0e0f},
-      {{mrrm_mod_indirect, 0, mrrm_rm_bp, 0x1234}, 0x1234},
-      {{mrrm_mod_indirect, 0, mrrm_rm_bx, 0x0000}, 0x0607},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bx_si}, {.as_offset = 0x0000}}, 0x1214},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bx_di}, {.as_offset = 0x0000}}, 0x1416},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bp_si}, {.as_offset = 0x0000}}, 0x1416},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bp_di}, {.as_offset = 0x0000}}, 0x1618},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_si}, {.as_offset = 0x0000}}, 0x0c0d},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_di}, {.as_offset = 0x0000}}, 0x0e0f},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bp}, {.as_address = 0x1234}}, 0x1234},
+      {{mod_rm_mod_indirect, 0, {.as_mem= mod_rm_mem_bx}, {.as_offset = 0x0000}}, 0x0607},
 
-      {{mrrm_mod_byte, 0, mrrm_rm_bx_si, 0x10}, 0x1224},
-      {{mrrm_mod_byte, 0, mrrm_rm_bx_di, 0x11}, 0x1427},
-      {{mrrm_mod_byte, 0, mrrm_rm_bp_si, 0x12}, 0x1428},
-      {{mrrm_mod_byte, 0, mrrm_rm_bp_di, 0x13}, 0x162b},
-      {{mrrm_mod_byte, 0, mrrm_rm_si, 0x14}, 0x0c21},
-      {{mrrm_mod_byte, 0, mrrm_rm_di, 0x15}, 0x0e24},
-      {{mrrm_mod_byte, 0, mrrm_rm_bp, 0x16}, 0x081f},
-      {{mrrm_mod_byte, 0, mrrm_rm_bx, 0x17}, 0x061e},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bx_si}, {.as_offset = 0x10}}, 0x1224},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bx_di}, {.as_offset = 0x11}}, 0x1427},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bp_si}, {.as_offset = 0x12}}, 0x1428},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bp_di}, {.as_offset = 0x13}}, 0x162b},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_si}, {.as_offset = 0x14}}, 0x0c21},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_di}, {.as_offset = 0x15}}, 0x0e24},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bp}, {.as_offset = 0x16}}, 0x081f},
+      {{mod_rm_mod_byte, 0, {.as_mem= mod_rm_mem_bx}, {.as_offset = 0x17}}, 0x061e},
 
-      {{mrrm_mod_word, 0, mrrm_rm_bx_si, 0x0001}, 0x1215},
-      {{mrrm_mod_word, 0, mrrm_rm_bx_di, 0x0203}, 0x1619},
-      {{mrrm_mod_word, 0, mrrm_rm_bp_si, 0x0405}, 0x181b},
-      {{mrrm_mod_word, 0, mrrm_rm_bp_di, 0x0607}, 0x1c1f},
-      {{mrrm_mod_word, 0, mrrm_rm_si, 0x0809}, 0x1416},
-      {{mrrm_mod_word, 0, mrrm_rm_di, 0x0a0b}, 0x181a},
-      {{mrrm_mod_word, 0, mrrm_rm_bp, 0x0c0d}, 0x1416},
-      {{mrrm_mod_word, 0, mrrm_rm_bx, 0x0e0f}, 0x1416},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bx_si}, {.as_offset = 0x0001}}, 0x1215},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bx_di}, {.as_offset = 0x0203}}, 0x1619},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bp_si}, {.as_offset = 0x0405}}, 0x181b},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bp_di}, {.as_offset = 0x0607}}, 0x1c1f},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_si}, {.as_offset = 0x0809}}, 0x1416},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_di}, {.as_offset = 0x0a0b}}, 0x181a},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bp}, {.as_offset = 0x0c0d}}, 0x1416},
+      {{mod_rm_mod_word, 0, {.as_mem= mod_rm_mem_bx}, {.as_offset = 0x0e0f}}, 0x1416},
   };
 
   for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
@@ -528,22 +513,21 @@ void test_calc_mod_reg_rm_addr(void) {
 }
 #endif
 
-static u8 read_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr, enum segment_register seg_reg) {
+static u8 read_mod_reg_rm_8(struct cpu *cpu, struct mod_rm mrm, enum segment_register seg_reg) {
   printf("reading mod r/m address from ");
 
-  u16 addr = 0;
-
-  switch (mrr.mod) {
-    case mrrm_mod_indirect:
-    case mrrm_mod_byte:
-    case mrrm_mod_word: {
-      addr = calc_mod_reg_rm_addr(cpu, mrr);
+  switch (mrm.mod) {
+    case mod_rm_mod_indirect:
+    case mod_rm_mod_byte:
+    case mod_rm_mod_word: {
+      u16 addr = calc_mod_reg_rm_addr(cpu, mrm);
       return bus_fetch(cpu->bus, segment_offset(cpu->segments[seg_reg], addr));
     }
 
-    case mrrm_mod_register: {
-      printf("register %s\n", register_8_to_string(mrr.rm));
-      return cpu->regs.reg_8[mrr.rm];
+    case mod_rm_mod_register: {
+      printf("register %s\n", register_8_to_string(mrm.reg_mem.as_reg));
+      // TODO: This needs a mapping!!
+      return cpu->regs.reg_8[mrm.reg_mem.as_reg];
     }
 
     default:
@@ -552,19 +536,44 @@ static u8 read_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr, enum segment
   }
 }
 
-static void write_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr,
+#if defined(TESTING)
+void test_read_mod_reg_rm_8(void) {
+  struct cpu cpu;
+  struct bus bus;
+
+  u8 buffer[] = {0x00};
+  testing_dummy_cpu_init(&cpu, &bus, buffer, sizeof(buffer));
+
+  cpu.regs.reg_16[DX] = 0x1234;
+  cpu.regs.reg_16[SI] = 0x0000;
+  cpu.segments[DS] = 0x0000;
+
+  struct mod_rm mrm;
+  mrm.mod = mod_rm_mod_register;
+  mrm.reg = mod_rm_reg_bl_bx;
+  mrm.reg_mem.as_reg = mod_rm_reg_dl_dx;
+
+  u8 result = read_mod_reg_rm_8(&cpu, mrm, DS);
+  EXPECT_U8_EQ(0x12, result);
+
+  testing_dummy_cpu_destroy(&bus);
+}
+#endif
+
+static void write_mod_reg_rm_8(struct cpu *cpu, struct mod_rm mrm,
                                enum segment_register seg_reg, u8 value) {
-  switch ((enum mrrm_mod)mrr.mod) {
-    case mrrm_mod_indirect:
-    case mrrm_mod_byte:
-    case mrrm_mod_word: {
-      u16 addr = calc_mod_reg_rm_addr(cpu, mrr);
+  switch (mrm.mod) {
+    case mod_rm_mod_indirect:
+    case mod_rm_mod_byte:
+    case mod_rm_mod_word: {
+      u16 addr = calc_mod_reg_rm_addr(cpu, mrm);
       bus_store(cpu->bus, segment_offset(cpu->segments[seg_reg], addr), value);
       break;
     }
 
-    case mrrm_mod_register:
-      cpu->regs.reg_8[mrr.rm] = value;
+    case mod_rm_mod_register:
+      // TODO: This needs a mapping!!
+      cpu->regs.reg_8[mrm.reg_mem.as_reg] = value;
       break;
 
     default:
@@ -573,13 +582,31 @@ static void write_mod_reg_rm_8(struct cpu *cpu, struct mod_reg_rm mrr,
 }
 
 static void update_flags_sign_zero_parity_8(struct flags_map *flags, u8 value) {
-  flags->sign = value * 0x80;
+  flags->sign = (value & 0x80) != 0;
   flags->zero = !value;
   flags->parity = parity[value];
 }
 
 #if defined(TESTING)
-void test_cpu_flags_sign_zero_parity_8(void) {
+void test_update_flags_sign_zero_parity_8(void) {
+  static struct {
+    u8 input;
+    u8 sign;
+    u8 zero;
+    u8 parity;
+  } tests[] = {
+      {0x00, 0, 1, 1},
+      {-78, 1, 0, 1},
+  };
+
+  for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
+    struct flags_map flags;
+    memset(&flags, 0, sizeof(struct flags_map));
+    update_flags_sign_zero_parity_8(&flags, tests[i].input);
+    EXPECT_U8_EQ(tests[i].sign, flags.sign);
+    EXPECT_U8_EQ(tests[i].zero, flags.zero);
+    EXPECT_U8_EQ(tests[i].parity, flags.parity);
+  }
 }
 #endif
 
@@ -617,12 +644,12 @@ void test_instruction_rol_8(void) {
     u8 carry;
     u8 overflow;
   } tests[] = {
-      {0b00000000, 0b00000000, 1, 0, 0},
-      {0b00000001, 0b00000010, 1, 0, 0},
-      {0b10000000, 0b00000001, 1, 1, 0},
-      {0b10111111, 0b01111111, 1, 1, 0},
-      // TODO: Test for overflow flag.
+      {0x00, 0x00, 1, 0, 0},
+      {0x01, 0x02, 1, 0, 0},
+      {0x80, 0x01, 1, 1, 0},
+      {0xbf, 0x7f, 1, 1, 0},
   };
+  // TODO: Test for overflow flag.
 
   for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
     struct flags_map flags = decode_flags(0x0);
@@ -643,7 +670,7 @@ u8 instruction_group_2_8(enum instruction_group_2_type type, struct flags_map *f
       return instruction_rol_8(value, count, flags);
 
     case instruction_group_2_type_shr: {
-      flags->overflow = (count == 1) && (value_16 * 0x80);
+      flags->overflow = (count == 1) && (value_16 & 0x80);
 
       for (u16 shift = 0; shift <= count; ++shift) {
         flags->carry = value_16 & 1;
@@ -952,13 +979,13 @@ void cpu_run(struct cpu *cpu) {
       }
 
       case 0xd2: {
-        struct mod_reg_rm mrr = fetch_mod_reg_rm(cpu);
-        u8 value = read_mod_reg_rm_8(cpu, mrr, segment_register);
+        struct mod_rm mrm = fetch_mod_rm(cpu);
+        u8 value = read_mod_reg_rm_8(cpu, mrm, segment_register);
 
         struct flags_map flags = decode_flags(cpu->flags);
-        instruction_group_2_8(mrr.reg, &flags, value, cpu->regs.reg_8[CL]);
+        instruction_group_2_8(mrm.reg, &flags, value, cpu->regs.reg_8[CL]);
 
-        write_mod_reg_rm_8(cpu, mrr, segment_register, value);
+        write_mod_reg_rm_8(cpu, mrm, segment_register, value);
         return;
         break;
       }
@@ -993,6 +1020,8 @@ void cpu_run(struct cpu *cpu) {
 void test_simple_cpu(void) {
   test_fetch_mod_reg_rm();
   test_calc_mod_reg_rm_addr();
+  test_update_flags_sign_zero_parity_8();
   test_instruction_rol_8();
+  test_read_mod_reg_rm_8();
 }
 #endif

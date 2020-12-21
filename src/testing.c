@@ -26,8 +26,8 @@ void testing_dummy_cpu_destroy(struct bus *bus) {
 
 int main(void) {
   // decoder_tests();
-  // mod_rm_tests();
+  mod_rm_tests();
 
-  test_cpu();
+  // test_cpu();
   return 0;
 }

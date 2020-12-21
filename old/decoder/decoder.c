@@ -84,7 +84,7 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
   result->size = size;
   u8 mod_rm_byte = buffer[1];
 
-  enum mrrm_mod mod = decode_mrrm_mod(mod_rm_byte);
+  enum mod_rm_mod mod = MOD_REG_RM_MOD(mod_rm_byte);
 
   switch (mod) {
     case mrrm_mod_indirect: {
@@ -121,12 +121,12 @@ int decode_mem_operand(enum operand_size size, const u8 *buffer, unsigned buffer
       switch (size) {
         case os_8:
           result->data.as_register.reg_8 =
-              encoding_to_register_8(decode_mrrm_reg_from_rm(mod_rm_byte));
+              encoding_to_register_8(decode_mod_rm_rm_reg(mod_rm_byte));
           return 0;
 
         case os_16:
           result->data.as_register.reg_16 =
-              encoding_to_register_16(decode_mrrm_reg_from_rm(mod_rm_byte));
+              encoding_to_register_16(decode_mod_rm_rm_reg(mod_rm_byte));
           return 0;
 
         default:

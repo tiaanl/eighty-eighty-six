@@ -2,14 +2,14 @@
 #define REGISTERS_H_
 
 enum register_8 {
-  AL,
   AH,
-  CL,
+  AL,
   CH,
-  DL,
+  CL,
   DH,
-  BL,
+  DL,
   BH,
+  BL,
 
   REGISTER_8_COUNT,
 };
@@ -20,8 +20,8 @@ enum register_16 {
   DX,
   BX,
 
-  BP,
   SP,
+  BP,
   SI,
   DI,
 

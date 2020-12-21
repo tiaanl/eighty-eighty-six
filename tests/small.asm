@@ -1,5 +1,8 @@
 ; sum of odd numbers in the array.
 
+     mov dx, bx
+     ;mov [ds:si], dx
+
     ;shr byte [bp], cl
 
     ;inc cx
@@ -8,7 +11,7 @@
     ;mov cs, ax
     ;jmp 0xACDC:0x5578
     ;mov [cs:0x5578], ax
-    ; repe stosb
+    ;repe stosb
 
     ;mov ax, [cs:0x000f]
 
