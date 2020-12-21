@@ -1,6 +1,7 @@
 #include "mod_rm.h"
 #include "testing.h"
 
+#if defined(TESTING)
 void test_decoders(void) {
   EXPECT_U8_EQ(MOD_RM_MOD(0xff), 0x03);
   EXPECT_U8_EQ(MOD_RM_REG(0xff), 0x07);
@@ -39,3 +40,4 @@ void mod_rm_tests(void) {
   test_encode_mod_rm_values();
   test_encode_mod_rm();
 }
+#endif  // defined(TESTING)

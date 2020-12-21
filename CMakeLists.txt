@@ -44,7 +44,7 @@ endif ()
 add_dependencies(main assemble)
 
 set(TEST_FILES
-    src/mod_rm_tests.c
+    src/mod_rm.c
     src/testing.c
     src/testing.h
     )

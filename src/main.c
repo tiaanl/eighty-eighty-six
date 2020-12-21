@@ -5,11 +5,6 @@
 #include <malloc.h>
 #include <stdio.h>
 
-extern unsigned char small[];
-extern unsigned int small_len;
-
-#include "../tests/xwing.com.c"
-
 // 1mb
 #define DEFAULT_RAM_SIZE 0x100000
 
@@ -48,9 +43,6 @@ int main(void) {
   //       at the end of memory, so as soon as the second instruction is decoded, we run over the
   //       buffer.
   u8 *memory = malloc(DEFAULT_RAM_SIZE + 100);
-
-  // memcpy(memory, small, small_len);
-  // memcpy(memory, XWING_COM, XWING_COM_len);
 
   if (load_bios_into_memory(memory, DEFAULT_RAM_SIZE,
                             "/home/tilo/Code/eighty-eighty-six/bins/"
