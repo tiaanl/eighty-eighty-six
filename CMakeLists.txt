@@ -35,7 +35,7 @@ set_target_properties(main PROPERTIES
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(main PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(main PUBLIC -Wall -Wextra -pedantic --coverage)
+    target_compile_options(main PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
     # using Intel C++
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -55,7 +55,7 @@ set_target_properties(testing PROPERTIES
     C_EXTENSIONS NO
     )
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic --coverage)
+    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(testing PUBLIC -Wall -Wextra -pedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")

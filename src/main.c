@@ -58,8 +58,8 @@ int main(void) {
   cpu_init(&cpu, &bus);
 
   // Typical memory location for the first instruction inside a BIOS.
-  cpu.segments[CS] = 0xffff;
-  cpu.ip = 0x0000;
+  cpu.segments[CS] = 0xf000;
+  cpu.ip = 0xfff0;
 
   cpu_run(&cpu);
 

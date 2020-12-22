@@ -33,6 +33,26 @@ struct flags_map {
   u8 overflow;  // 11
 };
 
+static inline u8 most_significant_bit_8(u8 byte) {
+  return (byte >> 7) & 1;
+}
+
+static inline u16 most_significant_bit_16(u16 word) {
+  return (word >> 15) & 1;
+}
+
+#if defined(TESTING)
+void test_most_significant_bit(void) {
+  EXPECT_U8_EQ(most_significant_bit_8(0), 0);
+  EXPECT_U8_EQ(most_significant_bit_8(1), 0);
+  EXPECT_U8_EQ(most_significant_bit_8(-1), 1);
+
+  EXPECT_U8_EQ(most_significant_bit_16(0), 0);
+  EXPECT_U8_EQ(most_significant_bit_16(1), 0);
+  EXPECT_U8_EQ(most_significant_bit_16(-1), 1);
+}
+#endif
+
 static inline u16 encode_flags(struct flags_map flags) {
   // `f02a` is all reserved flags set to 1.
   return 0xf02a |                  //
@@ -204,7 +224,7 @@ static void write_mod_reg_rm_8(struct cpu *cpu, struct mod_rm mrm, enum segment_
 }
 
 static void update_flags_sign_zero_parity_8(struct flags_map *flags, u8 value) {
-  flags->sign = (value & 0x80) != 0;
+  flags->sign = most_significant_bit_8(value);
   flags->zero = !value;
   flags->parity = parity[value];
 }
@@ -224,22 +244,107 @@ static u8 instruction_rol_8(u8 value, u8 count, struct flags_map *flags) {
   u16 value_16 = value;
   u8 carry = 0;
   while (count > 0) {
-    carry = (value_16 & 0x80) ? 1 : 0;
+    carry = most_significant_bit_8(value);
     value_16 = (value_16 << 1) + carry;
     --count;
   }
   flags->carry = carry;
-  flags->overflow = (count == 1) ? (value_16 & 0x80) && carry : 0;
+  flags->overflow = (count == 1) ? most_significant_bit_8(value_16) && carry : 0;
 
   return value_16 & 0xff;
+}
+
+#if defined(TESTING)
+void test_instruction_rol_8(void) {
+  static struct {
+    u8 input;
+    u8 count;
+    u8 result;
+    u8 carry;
+    u8 overflow;
+  } tests[] = {
+      {0x00, 1, 0x00, 0, 0},
+      {0x01, 1, 0x02, 0, 0},
+      {0x80, 1, 0x01, 1, 0},
+      {0xbf, 1, 0x7f, 1, 0},
+  };
+  // TODO: Test for overflow flag.
+
+  for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
+    struct flags_map flags = decode_flags(0x0);
+    u8 result = instruction_rol_8(tests[i].input, tests[i].count, &flags);
+    EXPECT_U8_EQ(result, tests[i].result);
+    EXPECT_U8_EQ(flags.carry, tests[i].carry);
+    EXPECT_U8_EQ(flags.overflow, tests[i].overflow);
+  }
+}
+#endif
+
+static u8 instruction_ror_8(u8 value, u8 count, struct flags_map *flags) {
+  u16 value_16 = value;
+
+  u8 carry;
+  for (u16 shift = 1; shift <= count; ++shift) {
+    carry = value_16 & 1;
+    value_16 = (value_16 >> 1) | (carry << 7);
+  }
+  flags->carry = carry;
+
+  if (count == 1) {
+    flags->overflow = (value_16 >> 7) ^ ((value_16 >> 6) & 1);
+  }
+
+  return value_16 & 0xff;
+}
+
+#if defined(TESTING)
+void test_instruction_ror_8(void) {
+  static struct {
+    u8 input;
+    u8 count;
+    u8 result;
+    u8 carry;
+    u8 overflow;
+  } tests[] = {
+      {0x00, 1, 0x00, 0, 0},
+      {0x01, 1, 0x80, 1, 1},
+      {0x80, 1, 0x40, 0, 1},
+      {0xfd, 1, 0xfe, 1, 0},
+  };
+
+  for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
+    struct flags_map flags = decode_flags(0x0);
+    u8 result = instruction_ror_8(tests[i].input, tests[i].count, &flags);
+    EXPECT_U8_EQ(result, tests[i].result);
+    EXPECT_U8_EQ(flags.carry, tests[i].carry);
+    EXPECT_U8_EQ(flags.overflow, tests[i].overflow);
+  }
+}
+#endif
+
+static u8 instruction_rcl_8(u8 value, u8 count, struct flags_map *flags) {
+  u8 old_carry, carry = flags->carry;
+
+  for (u8 shift = 1; shift <= count; ++shift) {
+    old_carry = most_significant_bit_8(value);
+    value = (value << 1) + carry;
+    carry = old_carry;
+  }
+  flags->carry = carry;
+
+  if (count == 1) {
+    flags->overflow = most_significant_bit_8(value) ^ carry;
+  }
+
+  return value;
 }
 
 static u8 instruction_shr_8(u8 value, u8 count, struct flags_map *flags) {
   u16 value_16 = value;
 
-  flags->overflow = (count == 1) && (value_16 & 0x80);
+  flags->overflow = (count == 1) && most_significant_bit_8(value_16);
 
-  for (u16 shift = 0; shift <= count; ++shift) {
+  for (u16 shift = 1; shift <= count; ++shift) {
     flags->carry = value_16 & 1;
     value_16 >>= 1;
   }
@@ -249,11 +354,42 @@ static u8 instruction_shr_8(u8 value, u8 count, struct flags_map *flags) {
   return value_16 & 0xff;
 }
 
-static u8 instruction_group_2_8(enum instruction_group_2_type type, struct flags_map *flags, u8 value,
-                         u8 count) {
+#if defined(TESTING)
+void test_instruction_shr_8(void) {
+  static struct {
+    u8 input;
+    u8 count;
+    u8 result;
+    u8 carry;
+    u8 overflow;
+  } tests[] = {
+      {0x00, 1, 0x00, 0, 0},
+      {0x01, 1, 0x00, 1, 0},
+      {0x0e, 2, 0x03, 1, 0},
+  };
+  // TODO: Test for overflow flag.
+
+  for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
+    struct flags_map flags = decode_flags(0x0);
+    u8 result = instruction_shr_8(tests[i].input, tests[i].count, &flags);
+    EXPECT_U8_EQ(result, tests[i].result);
+    EXPECT_U8_EQ(flags.carry, tests[i].carry);
+    EXPECT_U8_EQ(flags.overflow, tests[i].overflow);
+  }
+}
+#endif
+
+static u8 instruction_group_2_8(enum instruction_group_2_type type, struct flags_map *flags,
+                                u8 value, u8 count) {
   switch (type) {
     case instruction_group_2_type_rol:
       return instruction_rol_8(value, count, flags);
+
+    case instruction_group_2_type_ror:
+      return instruction_ror_8(value, count, flags);
+
+    case instruction_group_2_type_rcl:
+      return instruction_rcl_8(value, count, flags);
 
     case instruction_group_2_type_shr: {
       return instruction_shr_8(value, count, flags);
@@ -1223,30 +1359,6 @@ void test_read_mod_reg_rm_8(void) {
   testing_dummy_cpu_destroy(&bus);
 }
 
-void test_instruction_rol_8(void) {
-  static struct {
-    u8 input;
-    u8 result;
-    u8 count;
-    u8 carry;
-    u8 overflow;
-  } tests[] = {
-      {0x00, 0x00, 1, 0, 0},
-      {0x01, 0x02, 1, 0, 0},
-      {0x80, 0x01, 1, 1, 0},
-      {0xbf, 0x7f, 1, 1, 0},
-  };
-  // TODO: Test for overflow flag.
-
-  for (unsigned i = 0; i < ARRAY_SIZE(tests); ++i) {
-    struct flags_map flags = decode_flags(0x0);
-    u8 result = instruction_rol_8(tests[i].input, tests[i].count, &flags);
-    EXPECT_U8_EQ(result, tests[i].result);
-    EXPECT_U8_EQ(flags.carry, tests[i].carry);
-    EXPECT_U8_EQ(flags.overflow, tests[i].overflow);
-  }
-}
-
 void test_update_flags_sign_zero_parity_8(void) {
   static struct {
     u8 input;
@@ -1269,10 +1381,13 @@ void test_update_flags_sign_zero_parity_8(void) {
 }
 
 void test_simple_cpu(void) {
+  test_most_significant_bit();
   test_fetch_mod_reg_rm();
   test_calc_mod_reg_rm_addr();
   test_update_flags_sign_zero_parity_8();
   test_instruction_rol_8();
-  test_read_mod_reg_rm_8();
+  test_instruction_ror_8();
+  test_instruction_shr_8();
+  // test_read_mod_reg_rm_8();
 }
 #endif
