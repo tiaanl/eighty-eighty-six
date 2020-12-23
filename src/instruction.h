@@ -8,16 +8,15 @@
 #include <string.h>
 
 enum operand_type {
+  ot_none,
   ot_displacement,
   ot_indirect,
   ot_direct,
   ot_direct_with_segment,
   ot_register,
   ot_immediate,
-  ot_jump,
+  ot_near_jump,
   ot_segment_register,
-
-  ot_none,
 };
 
 enum operand_size {
@@ -202,6 +201,8 @@ struct instruction {
   u8 instruction_size;
 #endif
 };
+
+void instruction_init(struct instruction *instruction);
 
 const char *instruction_type_to_string(enum instruction_type instruction_type);
 

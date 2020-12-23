@@ -9,7 +9,9 @@
 
 #include <stdio.h>
 
-// Map of 8-bit parity flags. sum of set bits are equal.
+/**
+ * 1 if sum of set bits are even, e.g. 0b00101100 == 0 (3 bits set)
+ */
 static const u8 parity[0x100] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,

@@ -25,6 +25,7 @@ set(SOURCE_FILES
     src/platform.h
     src/print_format.h
     src/registers.h
+    src/memory_reader.c
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})
@@ -32,15 +33,6 @@ set_target_properties(main PROPERTIES
     C_STANDARD 11
     C_EXTENSIONS NO
     )
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(main PUBLIC -Wall -Wextra -pedantic)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(main PUBLIC -Wall -Wextra -pedantic)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-    # using Intel C++
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(main PUBLIC /W3 /GR-)
-endif ()
 add_dependencies(main assemble)
 
 set(TEST_FILES
@@ -54,13 +46,10 @@ set_target_properties(testing PROPERTIES
     C_STANDARD 11
     C_EXTENSIONS NO
     )
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(testing PUBLIC -Wall -Wextra -pedantic)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-    # using Intel C++
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(testing PUBLIC /W3 /GR-)
-endif ()
 target_compile_definitions(testing PUBLIC -DTESTING)
+
+add_executable(ees-dis src/ees-dis.c src/decoder/decoder.c src/decoder/op_code_table.c ${SOURCE_FILES})
+set_target_properties(ees-dis PROPERTIES
+    C_STANDARD 11
+    C_EXTENSIONS NO
+    )

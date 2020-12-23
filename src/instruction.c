@@ -1,5 +1,9 @@
 #include "instruction.h"
 
+void instruction_init(struct instruction *instruction) {
+  memset(instruction, 0, sizeof(*instruction));
+}
+
 const char *instruction_type_to_string(enum instruction_type instruction_type) {
   static const char *mnemonics[] = {
       "<invalid>", "<noop>", "aaa",   "aad",   "aam",   "aas",   "adc",   "add",   "and",   "arpl",

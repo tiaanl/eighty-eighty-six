@@ -84,7 +84,7 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       printf("%s", segment_register_to_string(operand->data.as_segment_register.reg));
       break;
 
-    case ot_jump:
+    case ot_near_jump:
       printf("%d", operand->data.as_jump.offset);
       break;
 
