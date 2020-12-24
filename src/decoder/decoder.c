@@ -76,7 +76,7 @@ struct decode_context {
   unsigned data_read;
 };
 
-int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct memory_reader *reader,
+int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct input_stream *reader,
                        struct operand *result) {
   result->size = size;
 
@@ -85,7 +85,7 @@ int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct memory_
       enum indirect_encoding indirect_encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
       if (indirect_encoding == ie_bp) {
         result->type = ot_direct;
-        result->data.as_direct.address = memory_reader_fetch_u16(reader);
+        result->data.as_direct.address = input_stream_fetch_u16(reader);
         return 2;
       } else {
         result->type = ot_indirect;
@@ -97,14 +97,14 @@ int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct memory_
     case mod_rm_mod_byte: {
       result->type = ot_displacement;
       result->data.as_indirect.encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
-      result->data.as_displacement.displacement = (i16)memory_reader_fetch_i8(reader);
+      result->data.as_displacement.displacement = (i16)input_stream_fetch_i8(reader);
       return 1;
     }
 
     case mod_rm_mod_word: {
       result->type = ot_displacement;
       result->data.as_indirect.encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
-      result->data.as_displacement.displacement = memory_reader_fetch_i16(reader);
+      result->data.as_displacement.displacement = input_stream_fetch_i16(reader);
       return 2;
     }
 
@@ -132,34 +132,34 @@ int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct memory_
   return 0;
 }
 
-void decode_operand_common(enum decode_type decode_type, struct memory_reader *reader,
+void decode_operand_common(enum decode_type decode_type, struct input_stream *reader,
                            struct operand *result) {
   switch (decode_type) {
     case DT_IMM_8: {
       result->type = ot_immediate;
       result->size = os_8;
-      result->data.as_immediate.immediate_8 = memory_reader_fetch_u8(reader);
+      result->data.as_immediate.immediate_8 = input_stream_fetch_u8(reader);
       break;
     }
 
     case DT_IMM_16: {
       result->type = ot_immediate;
       result->size = os_16;
-      result->data.as_immediate.immediate_16 = memory_reader_fetch_u16(reader);
+      result->data.as_immediate.immediate_16 = input_stream_fetch_u16(reader);
       break;
     }
 
     case DT_JMP_8: {
-      result->type = ot_near_jump;
+      result->type = ot_jump;
       result->size = os_8;
-      result->data.as_jump.offset = (i16)memory_reader_fetch_i8(reader);
+      result->data.as_jump.offset = (i16)input_stream_fetch_i8(reader);
       break;
     }
 
     case DT_JMP_16: {
-      result->type = ot_near_jump;
+      result->type = ot_jump;
       result->size = os_16;
-      result->data.as_jump.offset = memory_reader_fetch_i16(reader);
+      result->data.as_jump.offset = input_stream_fetch_i16(reader);
       break;
     }
 
@@ -174,7 +174,7 @@ void decode_operand_common(enum decode_type decode_type, struct memory_reader *r
   }
 }
 
-void decode_operand(u8 op_code, enum decode_type decode_type, struct memory_reader *reader,
+void decode_operand(u8 op_code, enum decode_type decode_type, struct input_stream *reader,
                     struct operand *result) {
   switch (decode_type) {
     case DT_OP_CODE_REG_8: {
@@ -222,8 +222,8 @@ void decode_operand(u8 op_code, enum decode_type decode_type, struct memory_read
     case DT_SEG_DIRECT: {
       result->type = ot_direct_with_segment;
       result->size = 16;
-      u16 offset = memory_reader_fetch_u16(reader);
-      u16 segment = memory_reader_fetch_u16(reader);
+      u16 offset = input_stream_fetch_u16(reader);
+      u16 segment = input_stream_fetch_u16(reader);
       result->data.as_direct_with_segment.address = segment_offset(segment, offset);
       break;
     }
@@ -234,9 +234,9 @@ void decode_operand(u8 op_code, enum decode_type decode_type, struct memory_read
   }
 }
 
-void decode_operand_with_mod_rm(enum decode_type decode_type, struct memory_reader *reader,
+void decode_operand_with_mod_rm(enum decode_type decode_type, struct input_stream *reader,
                                 struct operand *result) {
-  struct mod_rm mrm = decode_mod_rm(memory_reader_fetch_u8(reader));
+  struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(reader));
 
   switch (decode_type) {
     case DT_MOD_RM_REG_8: {
@@ -276,8 +276,34 @@ void decode_operand_with_mod_rm(enum decode_type decode_type, struct memory_read
   }
 }
 
-void decode_instruction(struct memory_reader *reader, struct instruction *instruction) {
-  u8 op_code = memory_reader_fetch_u8(reader);
+struct instruction_reader_writer {
+  struct input_stream *original;
+  struct output_stream instruction_stream;
+};
+
+u8 instruction_reader_writer_fetch_u8(void *context, u32 position) {
+  struct instruction_reader_writer *irw = context;
+
+  u8 value = input_stream_fetch_u8(irw->original);
+  output_stream_store_u8(&irw->instruction_stream, value);
+
+  return value;
+}
+
+void decode_instruction(struct input_stream *reader, struct instruction *instruction) {
+#if !defined(NDEBUG)
+  struct input_stream wrapper;
+  struct instruction_reader_writer irw;
+  irw.original = reader;
+  output_stream_init(&irw.instruction_stream, &instruction->buffer,
+                     output_stream_flat_memory_store);
+
+  input_stream_init(&wrapper, &irw, instruction_reader_writer_fetch_u8);
+
+  reader = &wrapper;
+#endif
+
+  u8 op_code = input_stream_fetch_u8(reader);
 
   instruction->segment_register = DS;
   if (op_code == 0x2e || op_code == 0x26 || op_code == 0x3e || op_code == 0x36) {
@@ -303,7 +329,7 @@ void decode_instruction(struct memory_reader *reader, struct instruction *instru
         break;
     }
 
-    op_code = memory_reader_fetch_u8(reader);
+    op_code = input_stream_fetch_u8(reader);
   }
 
   struct op_code_mapping *mapping = &op_code_table[op_code];
@@ -319,4 +345,8 @@ void decode_instruction(struct memory_reader *reader, struct instruction *instru
     decode_operand(op_code, mapping->source_type, reader, &instruction->source);
     decode_operand(op_code, mapping->third_type, reader, &instruction->third);
   }
+
+#if !defined(NDEBUG)
+  instruction->instruction_size = irw.instruction_stream.position;
+#endif
 }

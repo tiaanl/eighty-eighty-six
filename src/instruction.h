@@ -15,7 +15,7 @@ enum operand_type {
   ot_direct_with_segment,
   ot_register,
   ot_immediate,
-  ot_near_jump,
+  ot_jump,
   ot_segment_register,
 };
 

@@ -1,7 +1,7 @@
 #include "decoder/decoder.h"
 #include "disassembler.h"
-#include "memory_reader.h"
 #include "platform.h"
+#include "streams.h"
 
 #include <malloc.h>
 #include <stdio.h>
@@ -45,15 +45,15 @@ int main(int argc, char *argv[]) {
 
   struct binary_data data = read_file(filename);
 
-  struct memory_reader reader;
-  memory_reader_init(&reader, &data, binary_data_fetch);
-  // memory_reader_set_position(&reader, data.data_size - 0x10);
+  struct input_stream in_stream;
+  input_stream_init(&in_stream, &data, binary_data_fetch);
+  // input_stream_set_position(&reader, data.data_size - 0x10);
 
-  while (reader.position < data.data_size) {
+  while (in_stream.position < data.data_size) {
     struct instruction instruction;
     instruction_init(&instruction);
-    unsigned pos = reader.position;
-    decode_instruction(&reader, &instruction);
+    unsigned pos = in_stream.position;
+    decode_instruction(&in_stream, &instruction);
     disassemble(&instruction, segment_offset(0, pos));
   }
 

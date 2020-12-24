@@ -529,7 +529,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       break;
 
     case JB: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_cf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -537,7 +537,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JNB: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_cf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -545,7 +545,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JZ: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_zf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -553,7 +553,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JNZ: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_zf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -561,7 +561,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JP: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_pf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -569,7 +569,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JNP: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_pf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -577,7 +577,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JS: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (cpu_flag_is_set(cpu, fl_sf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
@@ -585,7 +585,7 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
     }
 
     case JNS: {
-      assert(instruction->destination.type == ot_near_jump);
+      assert(instruction->destination.type == ot_jump);
       if (!cpu_flag_is_set(cpu, fl_sf)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }

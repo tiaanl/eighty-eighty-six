@@ -25,7 +25,7 @@ set(SOURCE_FILES
     src/platform.h
     src/print_format.h
     src/registers.h
-    src/memory_reader.c
+    src/streams.c
     )
 
 add_executable(main src/main.c ${SOURCE_FILES})
