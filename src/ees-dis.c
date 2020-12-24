@@ -49,11 +49,13 @@ int main(int argc, char *argv[]) {
   memory_reader_init(&reader, &data, binary_data_fetch);
   // memory_reader_set_position(&reader, data.data_size - 0x10);
 
-  struct instruction instruction;
-  instruction_init(&instruction);
-  unsigned pos = reader.position;
-  decode_instruction(&reader, &instruction);
-  disassemble(&instruction, segment_offset(0, pos));
+  while (reader.position < data.data_size) {
+    struct instruction instruction;
+    instruction_init(&instruction);
+    unsigned pos = reader.position;
+    decode_instruction(&reader, &instruction);
+    disassemble(&instruction, segment_offset(0, pos));
+  }
 
   return 0;
 }
