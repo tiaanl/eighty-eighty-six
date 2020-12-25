@@ -51,12 +51,70 @@ enum decode_type {
   DT_M,
 };
 
+enum addressing_method {
+  // None
+  am_Xx,
+
+  // General registers (8-bit)
+  am_AL,
+  am_CL,
+  am_DL,
+  am_BL,
+  am_AH,
+  am_CH,
+  am_DH,
+  am_BH,
+
+  // General registers (16-bit)
+  am_AX,
+  am_CX,
+  am_DX,
+  am_BX,
+  am_SP,
+  am_BP,
+  am_SI,
+  am_DI,
+
+  // Segment registers
+  am_ES,
+  am_CS,
+  am_SS,
+  am_DS,
+
+  // The immediate value 1
+  am_1,
+
+  // Addressing methods
+  am_Ap,
+  am_Eb,
+  am_Ew,
+  am_Fw,
+  am_Gb,
+  am_Gw,
+  am_Ib,
+  am_Iw,
+  am_Jb,
+  am_Jw,
+  am_M,
+  am_Ma,
+  am_Ob,
+  am_Ow,
+  am_Sw,
+  am_Xb,
+  am_Xw,
+  am_Yb,
+  am_Yw,
+};
+
 enum decode_flags {
   DF_HAS_MOD_RM = 0x01,
 };
 
 struct op_code_mapping {
   enum instruction_type instruction_type;
+  enum addressing_method tmp1;
+  enum addressing_method tmp2;
+  enum addressing_method tmp3;
   enum decode_type destination_type;
   enum decode_type source_type;
   enum decode_type third_type;

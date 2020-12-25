@@ -3,278 +3,306 @@
 #define _ DT_NONE
 #define __ 0
 
+/**
+ * Addressing Methods
+ * ==================
+ * A - Direct address: the instruction has no ModR/M byte; the address of the operand is encoded in
+ *     the instruction.
+ * E - A ModR/M byte follows the opcode and specifies the operand. The operand is either a
+ *     general-purpose register or a memory address. If it is a memory address, the address is
+ *     computed from a segment register and any of the following values: a base register, an index
+ *     register, a scaling factor, a displacement.
+ * F - FLAGS register.
+ * G - The reg field of the ModR/M byte selects a general register.
+ * I - Immediate data: the operand value is encoded in subsequent bytes of the instruction.
+ * J - The instruction contains a relative offset to be added to the instruction pointer register.
+ * M - The ModR/M byte may refer only to memory.
+ * O - The instruction has no ModR/M byte. The offset of the operand is coded as a word or double
+ *     word (depending on address size attribute) in the instruction.
+ * S - The reg field of the ModR/M byte selects a segment register.
+ * X - Memory addressed by the DS:SI register pair.
+ * Y - Memory addressed by the ES:DI register pair.
+ *
+ * Operand Type
+ * ============
+ * a - Two one-word operands in memory (used only by the BOUND instruction).
+ * b - Byte.
+ * p - 32-bit pointer.
+ * w - Word.
+ */
+
 // clang-format off
 struct op_code_mapping op_code_table[] = {
-    /* 00 Eb Gb    */ {ADD,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 01 Ew Gw    */ {ADD,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 02 Gb Eb    */ {ADD,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 03 Gw Ew    */ {ADD,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 04 AL Ib    */ {ADD,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 05 AX Iw    */ {ADD,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 06 ES       */ {PUSH,      DT_SEGMENT_REG,    _,                 _,         __},
-    /* 07 ES       */ {POP,       DT_SEGMENT_REG,    _,                 _,         __},
-    /* 08 Eb Gb    */ {OR,        DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 09 Ew Gw    */ {OR,        DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 0a Gb Eb    */ {OR,        DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 0b Gw Ew    */ {OR,        DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 0c AL Ib    */ {OR,        DT_AL,             DT_IMM_8,          _,         __},
-    /* 0d AX Iw    */ {OR,        DT_AX,             DT_IMM_16,         _,         __},
-    /* 0e CS       */ {PUSH,      DT_SEGMENT_REG,    _,                 _,         __},
-    /* 0f          */ {INVALID,   _,                 _,                 _,         __},            // Extended op codes.
+    /* 00 */ {ADD,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 01 */ {ADD,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 02 */ {ADD,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 03 */ {ADD,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 04 */ {ADD,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 05 */ {ADD,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 06 */ {PUSH,    am_ES, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 07 */ {POP,     am_ES, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 08 */ {OR,      am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 09 */ {OR,      am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 0a */ {OR,      am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 0b */ {OR,      am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 0c */ {OR,      am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 0d */ {OR,      am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 0e */ {PUSH,    am_CS, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 0f */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Extended op codes.
 
-    /* 10 Eb Gb    */ {ADC,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 11 Ew Gw    */ {ADC,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 12 Gb Eb    */ {ADC,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 13 Gw Ew    */ {ADC,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 14 AL Ib    */ {ADC,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 15 AX Iw    */ {ADC,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 16 SS       */ {PUSH,      DT_SEGMENT_REG,    _,                 _,         __},
-    /* 17 SS       */ {POP,       DT_SEGMENT_REG,    _,                 _,         __},
-    /* 18 Eb Gb    */ {SBB,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 19 Ew Gw    */ {SBB,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 1a Gb Eb    */ {SBB,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 1b Gw Ew    */ {SBB,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 1c AL Ib    */ {SBB,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 1d AX Iw    */ {SBB,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 1e DS       */ {PUSH,      DT_SEGMENT_REG,    _,                 _,         __},
-    /* 1f DS       */ {POP,       DT_SEGMENT_REG,    _,                 _,         __},
+    /* 10 */ {ADC,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 11 */ {ADC,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 12 */ {ADC,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 13 */ {ADC,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 14 */ {ADC,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 15 */ {ADC,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 16 */ {PUSH,    am_SS, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 17 */ {POP,     am_SS, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 18 */ {SBB,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 19 */ {SBB,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 1a */ {SBB,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 1b */ {SBB,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 1c */ {SBB,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 1d */ {SBB,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 1e */ {PUSH,    am_DS, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
+    /* 1f */ {POP,     am_DS, am_Xx, am_Xx, DT_SEGMENT_REG,    _,                 _,         __},
 
-    /* 20 Eb Gb    */ {AND,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 21 Ew Gw    */ {AND,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 22 Gb Eb    */ {AND,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 23 Gw Ew    */ {AND,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 24 AL Ib    */ {AND,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 25 AX Iw    */ {AND,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 26          */ {INVALID,   _,                 _,                 _,         __},            // Segment register override (ES)
-    /* 27          */ {DAA,       _,                 _,                 _,         __},
-    /* 28 Eb Gb    */ {SUB,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 29 Ew Gw    */ {SUB,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 2a Gb Eb    */ {SUB,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 2b Gw Ew    */ {SUB,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 2c AL Ib    */ {SUB,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 2d AX Iw    */ {SUB,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 2e          */ {INVALID,   _,                 _,                 _,         __},            // Segment register override (CS)
-    /* 2f          */ {DAS,       _,                 _,                 _,         __},
+    /* 20 */ {AND,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 21 */ {AND,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 22 */ {AND,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 23 */ {AND,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 24 */ {AND,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 25 */ {AND,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 26 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment register override (ES)
+    /* 27 */ {DAA,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 28 */ {SUB,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 29 */ {SUB,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 2a */ {SUB,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 2b */ {SUB,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 2c */ {SUB,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 2d */ {SUB,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 2e */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment register override (CS)
+    /* 2f */ {DAS,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
 
-    /* 30 Eb Gb    */ {XOR,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 31 Ew Gw    */ {XOR,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 32 Gb Eb    */ {XOR,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 33 Gw Ew    */ {XOR,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 34 AL Ib    */ {XOR,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 35 AX Iw    */ {XOR,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 36          */ {INVALID,   _,                 _,                 _,         __},            // Segment register override (SS)
-    /* 37          */ {AAA,       _,                 _,                 _,         __},
-    /* 38 Eb Gb    */ {CMP,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 39 Ew Gw    */ {CMP,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 3a Gb Eb    */ {CMP,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 3b Gw Ew    */ {CMP,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 3c AL Ib    */ {CMP,       DT_AL,             DT_IMM_8,          _,         __},
-    /* 3d AX Iw    */ {CMP,       DT_AX,             DT_IMM_16,         _,         __},
-    /* 3e          */ {INVALID,   _,                 _,                 _,         __},            // Segment register override (DS)
-    /* 3f          */ {AAS,       _,                 _,                 _,         __},
+    /* 30 */ {XOR,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 31 */ {XOR,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 32 */ {XOR,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 33 */ {XOR,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 34 */ {XOR,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 35 */ {XOR,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 36 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment register override (SS)
+    /* 37 */ {AAA,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 38 */ {CMP,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 39 */ {CMP,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 3a */ {CMP,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 3b */ {CMP,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 3c */ {CMP,     am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* 3d */ {CMP,     am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* 3e */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment register override (DS)
+    /* 3f */ {AAS,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
 
-    /* 40 AX       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 41 CX       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 42 DX       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 43 BX       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 44 SP       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 45 BP       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 46 SI       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 47 DI       */ {INC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 48 AX       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 49 CX       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4a DX       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4b BX       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4c SP       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4d BP       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4e SI       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 4f DI       */ {DEC,       DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 40 */ {INC,     am_AX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 41 */ {INC,     am_CX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 42 */ {INC,     am_DX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 43 */ {INC,     am_BX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 44 */ {INC,     am_SP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 45 */ {INC,     am_BP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 46 */ {INC,     am_SI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 47 */ {INC,     am_DI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 48 */ {DEC,     am_AX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 49 */ {DEC,     am_CX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4a */ {DEC,     am_DX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4b */ {DEC,     am_BX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4c */ {DEC,     am_SP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4d */ {DEC,     am_BP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4e */ {DEC,     am_SI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 4f */ {DEC,     am_DI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
 
-    /* 50 AX       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 51 CX       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 52 DX       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 53 BX       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 54 SP       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 55 BP       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 56 SI       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 57 DI       */ {PUSH,      DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 58 AX       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 59 CX       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5a DX       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5b BX       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5c SP       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5d BP       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5e SI       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
-    /* 5f DI       */ {POP,       DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 50 */ {PUSH,    am_AX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 51 */ {PUSH,    am_CX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 52 */ {PUSH,    am_DX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 53 */ {PUSH,    am_BX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 54 */ {PUSH,    am_SP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 55 */ {PUSH,    am_BP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 56 */ {PUSH,    am_SI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 57 */ {PUSH,    am_DI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 58 */ {POP,     am_AX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 59 */ {POP,     am_CX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5a */ {POP,     am_DX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5b */ {POP,     am_BX, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5c */ {POP,     am_SP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5d */ {POP,     am_BP, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5e */ {POP,     am_SI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
+    /* 5f */ {POP,     am_DI, am_Xx, am_Xx, DT_OP_CODE_REG_16, _,                 _,         __},
 
-    /* 60          */ {PUSHA,     _,                 _,                 _,         __},
-    /* 61          */ {POPA,      _,                 _,                 _,         __},
-    /* 62 Gw Ma    */ {BOUND,     DT_MOD_RM_REG_16,  DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 63 Ew Gw    */ {ARPL,      DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 64          */ {INVALID,   _,                 _,                 _,         __},            // Segment override:              FS??
-    /* 65          */ {INVALID,   _,                 _,                 _,         __},            // Segment override:              GS??
-    /* 66          */ {INVALID,   _,                 _,                 _,         __},            // Operand size override
-    /* 67          */ {INVALID,   _,                 _,                 _,         __},            // Operand address size override
-    /* 68 Iw       */ {PUSH,      DT_IMM_16,         _,                 _,         __},
-    /* 69 Gw Ew Iw */ {IMUL,      DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   DT_IMM_16, DF_HAS_MOD_RM},
-    /* 6a Ib       */ {PUSH,      DT_IMM_8,          _,                 _,         __},
-    /* 6b Gw Ew Ib */ {IMUL,      DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   DT_IMM_8,  DF_HAS_MOD_RM},
-    /* 6c Yb DX    */ {REP_INSB,  _,                 DT_DX,             _,         __},
-    /* 6d Yw DX    */ {REP_INSW,  _,                 DT_DX,             _,         __},
-    /* 6e DX Xb    */ {REP_OUTSB, DT_DX,             _,                 _,         __},
-    /* 6f DX Xw    */ {REP_OUTSW, DT_DX,             _,                 _,         __},
+    /* 60 */ {PUSHA,   am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 61 */ {POPA,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 62 */ {BOUND,   am_Gw, am_Ma, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 63 */ {ARPL,    am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 64 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment override:              FS??
+    /* 65 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Segment override:              GS??
+    /* 66 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Operand size override
+    /* 67 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Operand address size override
+    /* 68 */ {PUSH,    am_Iw, am_Xx, am_Xx, DT_IMM_16,         _,                 _,         __},
+    /* 69 */ {IMUL,    am_Gw, am_Ew, am_Iw, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   DT_IMM_16, DF_HAS_MOD_RM},
+    /* 6a */ {PUSH,    am_Ib, am_Xx, am_Xx, DT_IMM_8,          _,                 _,         __},
+    /* 6b */ {IMUL,    am_Gw, am_Ew, am_Ib, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   DT_IMM_8,  DF_HAS_MOD_RM},
+    /* 6c */ {INSB,    am_Yb, am_DX, am_Xx, _,                 DT_DX,             _,         __},
+    /* 6d */ {INSW,    am_Yw, am_DX, am_Xx, _,                 DT_DX,             _,         __},
+    /* 6e */ {OUTSB,   am_DX, am_Xb, am_Xx, DT_DX,             _,                 _,         __},
+    /* 6f */ {OUTSW,   am_DX, am_Xw, am_Xx, DT_DX,             _,                 _,         __},
 
-    /* 70 Jb       */ {JO,        DT_JMP_8,          _,                 _,         __},
-    /* 71 Jb       */ {JNO,       DT_JMP_8,          _,                 _,         __},
-    /* 72 Jb       */ {JB,        DT_JMP_8,          _,                 _,         __},
-    /* 73 Jb       */ {JNB,       DT_JMP_8,          _,                 _,         __},
-    /* 74 Jb       */ {JZ,        DT_JMP_8,          _,                 _,         __},
-    /* 75 Jb       */ {JNZ,       DT_JMP_8,          _,                 _,         __},
-    /* 76 Jb       */ {JBE,       DT_JMP_8,          _,                 _,         __},
-    /* 77 Jb       */ {JNBE,      DT_JMP_8,          _,                 _,         __},
-    /* 78 Jb       */ {JS,        DT_JMP_8,          _,                 _,         __},
-    /* 79 Jb       */ {JNS,       DT_JMP_8,          _,                 _,         __},
-    /* 7a Jb       */ {JP,        DT_JMP_8,          _,                 _,         __},
-    /* 7b Jb       */ {JNP,       DT_JMP_8,          _,                 _,         __},
-    /* 7c Jb       */ {JL,        DT_JMP_8,          _,                 _,         __},
-    /* 7d Jb       */ {JNL,       DT_JMP_8,          _,                 _,         __},
-    /* 7e Jb       */ {JLE,       DT_JMP_8,          _,                 _,         __},
-    /* 7f Jb       */ {JNLE,      DT_JMP_8,          _,                 _,         __},
+    /* 70 */ {JO,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 71 */ {JNO,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 72 */ {JB,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 73 */ {JNB,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 74 */ {JZ,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 75 */ {JNZ,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 76 */ {JBE,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 77 */ {JNBE,    am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 78 */ {JS,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 79 */ {JNS,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7a */ {JP,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7b */ {JNP,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7c */ {JL,      am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7d */ {JNL,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7e */ {JLE,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* 7f */ {JNLE,    am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
 
-    /* 80 Eb Ib    */ {CMP,       DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
-    /* 81 Ew Iw    */ {CMP,       DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
-    /* 82          */ {INVALID,   _,                 _,                 _,         DF_HAS_MOD_RM}, // Copy of 80??!
-    /* 83 Ew Ib    */ {CMP,       DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
-    /* 84 Eb Gb    */ {TEST,      DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 85 Ew Gw    */ {TEST,      DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 86 Eb Gb    */ {XCHG,      DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 87 Ew Gw    */ {XCHG,      DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 88 Eb Gb    */ {MOV,       DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
-    /* 89 Ew Gw    */ {MOV,       DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
-    /* 8a Gb Eb    */ {MOV,       DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
-    /* 8b Gw Ew    */ {MOV,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 8c Ew Sw    */ {MOV,       DT_MOD_RM_RM_16,   DT_SEGMENT_REG,    _,         DF_HAS_MOD_RM},
-    /* 8d Gw M     */ {LEA,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 8e Sw Ew    */ {MOV,       DT_SEGMENT_REG,    DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* 8f Ew       */ {POP,       DT_MOD_RM_RM_16,   _,                 _,         DF_HAS_MOD_RM}, // XOP prefix? ?!?!?
+    /* 80 */ {CMP,     am_Eb, am_Ib, am_Xx, DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
+    /* 81 */ {CMP,     am_Ew, am_Iw, am_Xx, DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
+    /* 82 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         DF_HAS_MOD_RM}, // Copy of 80??!
+    /* 83 */ {CMP,     am_Ew, am_Ib, am_Xx, DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
+    /* 84 */ {TEST,    am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 85 */ {TEST,    am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 86 */ {XCHG,    am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 87 */ {XCHG,    am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 88 */ {MOV,     am_Eb, am_Gb, am_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
+    /* 89 */ {MOV,     am_Ew, am_Gw, am_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
+    /* 8a */ {MOV,     am_Gb, am_Eb, am_Xx, DT_MOD_RM_REG_8,   DT_MOD_RM_RM_8,    _,         DF_HAS_MOD_RM},
+    /* 8b */ {MOV,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 8c */ {MOV,     am_Ew, am_Sw, am_Xx, DT_MOD_RM_RM_16,   DT_SEGMENT_REG,    _,         DF_HAS_MOD_RM},
+    /* 8d */ {LEA,     am_Gw, am_M,  am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 8e */ {MOV,     am_Sw, am_Ew, am_Xx, DT_SEGMENT_REG,    DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* 8f */ {POP,     am_Ew, am_Xx, am_Xx, DT_MOD_RM_RM_16,   _,                 _,         DF_HAS_MOD_RM}, // XOP prefix? ?!?!?
 
-    /* 90          */ {INVALID,   _,                 _,                 _,         __},
-    /* 91 AX CX    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 92 AX DX    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 93 AX BX    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 94 AX SP    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 95 AX BP    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 96 AX SI    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 97 AX DI    */ {XCHG,      DT_AX,             DT_OP_CODE_REG_16, _,         __},
-    /* 98          */ {CBW,       _,                 _,                 _,         __},
-    /* 99          */ {CWD,       _,                 _,                 _,         __},
-    /* 9a Ap       */ {CALLF,     DT_Ap,             _,                 _,         __},
-    /* 9b          */ {FWAIT,     _,                 _,                 _,         __},
-    /* 9c Fw       */ {PUSHF,     DT_Fw,             _,                 _,         __},
-    /* 9d Fw       */ {POPF,      DT_Fw,             _,                 _,         __},
-    /* 9e          */ {SAHF,      _,                 _,                 _,         __},
-    /* 9f          */ {LAHF,      _,                 _,                 _,         __},
+    /* 90 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 91 */ {XCHG,    am_AX, am_CX, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 92 */ {XCHG,    am_AX, am_DX, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 93 */ {XCHG,    am_AX, am_BX, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 94 */ {XCHG,    am_AX, am_SP, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 95 */ {XCHG,    am_AX, am_BP, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 96 */ {XCHG,    am_AX, am_SI, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 97 */ {XCHG,    am_AX, am_DI, am_Xx, DT_AX,             DT_OP_CODE_REG_16, _,         __},
+    /* 98 */ {CBW,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 99 */ {CWD,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 9a */ {CALLF,   am_Ap, am_Xx, am_Xx, DT_Ap,             _,                 _,         __},
+    /* 9b */ {FWAIT,   am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 9c */ {PUSHF,   am_Fw, am_Xx, am_Xx, DT_Fw,             _,                 _,         __},
+    /* 9d */ {POPF,    am_Fw, am_Xx, am_Xx, DT_Fw,             _,                 _,         __},
+    /* 9e */ {SAHF,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* 9f */ {LAHF,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
 
-    /* a0 AL Ob    */ {MOV,       DT_AL,             DT_JMP_16,         _,         __},
-    /* a1 AX Ow    */ {MOV,       DT_AX,             DT_JMP_16,         _,         __},
-    /* a2 Ob AL    */ {MOV,       DT_JMP_16,         DT_AL,             _,         __},
-    /* a3 Ow AX    */ {MOV,       DT_JMP_16,         DT_AX,             _,         __},
-    /* a4 Xb Yb    */ {REP_MOVSB, _,                 _,                 _,         __},
-    /* a5 Xw Yw    */ {REP_MOVSW, _,                 _,                 _,         __},
-    /* a6 Xb Yb    */ {REP_CMPSB, _,                 _,                 _,         __},
-    /* a7 Xw Yw    */ {REP_CMPSW, _,                 _,                 _,         __},
-    /* a8 AL Ib    */ {TEST,      DT_AL,             DT_IMM_8,          _,         __},
-    /* a9 AX Iw    */ {TEST,      DT_AX,             DT_IMM_16,         _,         __},
-    /* aa Yb AL    */ {REP_STOSB, _,                 _,                 _,         __},            // rep stosb [ES:DI+offset],          al
-    /* ab Yw AX    */ {REP_STOSW, _,                 _,                 _,         __},
-    /* ac AL Xb    */ {REP_LODSB, _,                 _,                 _,         __},
-    /* ad AX Xw    */ {REP_LODSW, _,                 _,                 _,         __},
-    /* ae AL Yb    */ {REP_SCASB, _,                 _,                 _,         __},
-    /* af AX Yw    */ {REP_SCASW, _,                 _,                 _,         __},
+    /* a0 */ {MOV,     am_AL, am_Ob, am_Xx, DT_AL,             DT_JMP_16,         _,         __},
+    /* a1 */ {MOV,     am_AX, am_Ow, am_Xx, DT_AX,             DT_JMP_16,         _,         __},
+    /* a2 */ {MOV,     am_Ob, am_AL, am_Xx, DT_JMP_16,         DT_AL,             _,         __},
+    /* a3 */ {MOV,     am_Ow, am_AX, am_Xx, DT_JMP_16,         DT_AX,             _,         __},
+    /* a4 */ {MOVSB,   am_Xb, am_Yb, am_Xx, _,                 _,                 _,         __},
+    /* a5 */ {MOVSW,   am_Xw, am_Yw, am_Xx, _,                 _,                 _,         __},
+    /* a6 */ {CMPSB,   am_Xb, am_Yb, am_Xx, _,                 _,                 _,         __},
+    /* a7 */ {CMPSW,   am_Xw, am_Yw, am_Xx, _,                 _,                 _,         __},
+    /* a8 */ {TEST,    am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* a9 */ {TEST,    am_AX, am_Iw, am_Xx, DT_AX,             DT_IMM_16,         _,         __},
+    /* aa */ {STOSB,   am_Yb, am_AL, am_Xx, _,                 _,                 _,         __},            // rep stosb [ES:DI+offset],          al
+    /* ab */ {STOSW,   am_Yw, am_AX, am_Xx, _,                 _,                 _,         __},
+    /* ac */ {LODSB,   am_AL, am_Xb, am_Xx, _,                 _,                 _,         __},
+    /* ad */ {LODSW,   am_AX, am_Xw, am_Xx, _,                 _,                 _,         __},
+    /* ae */ {SCASB,   am_AL, am_Yb, am_Xx, _,                 _,                 _,         __},
+    /* af */ {SCASW,   am_AX, am_Yw, am_Xx, _,                 _,                 _,         __},
 
-    /* b0 AL Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b1 CL Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b2 DL Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b3 BL Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b4 AH Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b5 CH Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b6 DH Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b7 BH Ib    */ {MOV,       DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
-    /* b8 AX Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* b9 CX Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* ba DX Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* bb BX Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* bc BP Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* bd SP Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* be DI Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
-    /* bf SI Iw    */ {MOV,       DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* b0 */ {MOV,     am_AL, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b1 */ {MOV,     am_CL, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b2 */ {MOV,     am_DL, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b3 */ {MOV,     am_BL, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b4 */ {MOV,     am_AH, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b5 */ {MOV,     am_CH, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b6 */ {MOV,     am_DH, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b7 */ {MOV,     am_BH, am_Ib, am_Xx, DT_OP_CODE_REG_8,  DT_IMM_8,          _,         __},
+    /* b8 */ {MOV,     am_AX, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* b9 */ {MOV,     am_CX, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* ba */ {MOV,     am_DX, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* bb */ {MOV,     am_BX, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* bc */ {MOV,     am_BP, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* bd */ {MOV,     am_SP, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* be */ {MOV,     am_DI, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
+    /* bf */ {MOV,     am_SI, am_Iw, am_Xx, DT_OP_CODE_REG_16, DT_IMM_16,         _,         __},
 
-    /* c0 Eb Ib    */ {SAR,       DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|SHR|SAL|SAR
-    /* c1 Ew Ib    */ {SAR,       DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|SHR|SAL|SAR
-    /* c2 Iw       */ {RET,       DT_IMM_16,         _,                 _,         __},
-    /* c3          */ {RET,       _,                 _,                 _,         __},            // no operands?
-    /* c4 Gw Ew    */ {LES,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* c5 Gw Ew    */ {LDS,       DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
-    /* c6 Eb Ib    */ {MOV,       DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM},
-    /* c7 Ew Iw    */ {MOV,       DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM},
-    /* c8 Iw Ib    */ {ENTER,     DT_IMM_16,         DT_IMM_8,          _,         __},
-    /* c9          */ {LEAVE,     _,                 _,                 _,         __},
-    /* ca Iw       */ {RETF,      DT_IMM_16,         _,                 _,         __},
-    /* cb          */ {RETF,      _,                 _,                 _,         __},
-    /* cc          */ {INT3,      _,                 _,                 _,         __},
-    /* cd Ib       */ {INT,       DT_IMM_8,          _,                 _,         __},
-    /* ce          */ {INTO,      _,                 _,                 _,         __},
-    /* cf          */ {IRET,      _,                 _,                 _,         __},
+    /* c0 */ {SAR,     am_Eb, am_Ib, am_Xx, DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|SHR|SAL|SAR
+    /* c1 */ {SAR,     am_Ew, am_Ib, am_Xx, DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|SHR|SAL|SAR
+    /* c2 */ {RET,     am_Iw, am_Xx, am_Xx, DT_IMM_16,         _,                 _,         __},
+    /* c3 */ {RET,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // no operands?
+    /* c4 */ {LES,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* c5 */ {LDS,     am_Gw, am_Ew, am_Xx, DT_MOD_RM_REG_16,  DT_MOD_RM_RM_16,   _,         DF_HAS_MOD_RM},
+    /* c6 */ {MOV,     am_Eb, am_Ib, am_Xx, DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM},
+    /* c7 */ {MOV,     am_Ew, am_Iw, am_Xx, DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM},
+    /* c8 */ {ENTER,   am_Iw, am_Ib, am_Xx, DT_IMM_16,         DT_IMM_8,          _,         __},
+    /* c9 */ {LEAVE,   am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* ca */ {RETF,    am_Iw, am_Xx, am_Xx, DT_IMM_16,         _,                 _,         __},
+    /* cb */ {RETF,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* cc */ {INT3,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* cd */ {INT,     am_Ib, am_Xx, am_Xx, DT_IMM_8,          _,                 _,         __},
+    /* ce */ {INTO,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* cf */ {IRET,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
 
-    /* d0 Eb 1     */ {SAR,       DT_MOD_RM_RM_8,    1,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
-    /* d1 Ew 1     */ {SAR,       DT_MOD_RM_RM_16,   1,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
-    /* d2 Eb       */ {SAR,       DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
-    /* d3 Ew       */ {SAR,       DT_MOD_RM_RM_16,   _,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
-    /* d4          */ {AAM,       _,                 _,                 _,         __},
-    /* d5          */ {AAD,       _,                 _,                 _,         __},
-    /* d6          */ {SALC,      _,                 _,                 _,         __},
-    /* d7          */ {XLAT,      _,                 _,                 _,         __},
-    /* d8          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* d9          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* da          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* db          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* dc          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* dd          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* de          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
-    /* df          */ {INVALID,   _,                 _,                 _,         __},            // FPU instructions
+    /* d0 */ {SAR,     am_Eb, am_1,  am_Xx, DT_MOD_RM_RM_8,    1,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
+    /* d1 */ {SAR,     am_Ew, am_1,  am_Xx, DT_MOD_RM_RM_16,   1,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
+    /* d2 */ {SAR,     am_Eb, am_Xx, am_Xx, DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
+    /* d3 */ {SAR,     am_Ew, am_Xx, am_Xx, DT_MOD_RM_RM_16,   _,                 _,         DF_HAS_MOD_RM}, // ROL|ROR|RCL|RCR|SHL|RHR|SAL|SAR
+    /* d4 */ {AAM,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* d5 */ {AAD,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* d6 */ {SALC,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* d7 */ {XLAT,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* d8 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* d9 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* da */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* db */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* dc */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* dd */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* de */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
+    /* df */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // FPU instructions
 
-    /* e0 Jb       */ {LOOPNE,    DT_JMP_8,          _,                 _,         __},
-    /* e1 Jb       */ {LOOPE,     DT_JMP_8,          _,                 _,         __},
-    /* e2 Jb       */ {LOOP,      DT_JMP_8,          _,                 _,         __},
-    /* e3 Jb       */ {JCXZ,      DT_JMP_8,          _,                 _,         __},
-    /* e4 AL Ib    */ {IN,        DT_AL,             DT_IMM_8,          _,         __},
-    /* e5 AX Ib    */ {IN,        DT_AX,             DT_IMM_8,          _,         __},
-    /* e6 Ib AL    */ {OUT,       DT_IMM_8,          DT_AL,             _,         __},
-    /* e7 Ib AX    */ {OUT,       DT_IMM_8,          DT_AX,             _,         __},
-    /* e8 Jw       */ {CALL,      DT_JMP_16,         _,                 _,         __},
-    /* e9 Jw       */ {JMP,       DT_JMP_16,         _,                 _,         __},
-    /* ea Ap       */ {JMP,       DT_SEG_DIRECT,     _,                 _,         __},            // mov cs:ip
-    /* eb Jb       */ {JMP,       DT_JMP_8,          _,                 _,         __},
-    /* ec AL DX    */ {IN,        DT_AL,             DT_DX,             _,         __},
-    /* ed AX DX    */ {IN,        DT_AX,             DT_DX,             _,         __},
-    /* ee DX AL    */ {OUT,       DT_DX,             DT_AL,             _,         __},
-    /* ef DX AX    */ {OUT,       DT_DX,             DT_AX,             _,         __},
+    /* e0 */ {LOOPNE,  am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* e1 */ {LOOPE,   am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* e2 */ {LOOP,    am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* e3 */ {JCXZ,    am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* e4 */ {IN,      am_AL, am_Ib, am_Xx, DT_AL,             DT_IMM_8,          _,         __},
+    /* e5 */ {IN,      am_AX, am_Ib, am_Xx, DT_AX,             DT_IMM_8,          _,         __},
+    /* e6 */ {OUT,     am_Ib, am_AL, am_Xx, DT_IMM_8,          DT_AL,             _,         __},
+    /* e7 */ {OUT,     am_Ib, am_AX, am_Xx, DT_IMM_8,          DT_AX,             _,         __},
+    /* e8 */ {CALL,    am_Jw, am_Xx, am_Xx, DT_JMP_16,         _,                 _,         __},
+    /* e9 */ {JMP,     am_Jw, am_Xx, am_Xx, DT_JMP_16,         _,                 _,         __},
+    /* ea */ {JMP,     am_Ap, am_Xx, am_Xx, DT_SEG_DIRECT,     _,                 _,         __},            // mov cs:ip
+    /* eb */ {JMP,     am_Jb, am_Xx, am_Xx, DT_JMP_8,          _,                 _,         __},
+    /* ec */ {IN,      am_AL, am_DX, am_Xx, DT_AL,             DT_DX,             _,         __},
+    /* ed */ {IN,      am_AX, am_DX, am_Xx, DT_AX,             DT_DX,             _,         __},
+    /* ee */ {OUT,     am_DX, am_AL, am_Xx, DT_DX,             DT_AL,             _,         __},
+    /* ef */ {OUT,     am_DX, am_AX, am_Xx, DT_DX,             DT_AX,             _,         __},
 
-    /* f0          */ {INVALID,   _,                 _,                 _,         __},            // Lock?
-    /* f1          */ {INT1,      _,                 _,                 _,         __},
-    /* f2          */ {INVALID,   _,                 _,                 _,         __},            // repne prefix
-    /* f3          */ {INVALID,   _,                 _,                 _,         __},            // rep prefix
-    /* f4          */ {HLT,       _,                 _,                 _,         __},
-    /* f5          */ {CMC,       _,                 _,                 _,         __},
-    /* f6 Eb Ib    */ {TEST,      DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // TEST|NOT|NEG|MUL|IMUL|DIV|IDIV
-    /* f7 Ew Iw    */ {TEST,      DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM}, // TEST|NOT|NEG|MUL|IMUL|DIV|IDIV
-    /* f8          */ {CLC,       _,                 _,                 _,         __},
-    /* f9          */ {STC,       _,                 _,                 _,         __},
-    /* fa          */ {CLI,       _,                 _,                 _,         __},
-    /* fb          */ {STI,       _,                 _,                 _,         __},
-    /* fc          */ {CLD,       _,                 _,                 _,         __},
-    /* fd          */ {STD,       _,                 _,                 _,         __},
-    /* fe Eb       */ {DEC,       DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM},
-    /* ff Eb       */ {INC,       DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM},
+    /* f0 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // Lock?
+    /* f1 */ {INT1,    am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* f2 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // repne prefix
+    /* f3 */ {INVALID, am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},            // rep prefix
+    /* f4 */ {HLT,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* f5 */ {CMC,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* f6 */ {TEST,    am_Eb, am_Ib, am_Xx, DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // TEST|NOT|NEG|MUL|IMUL|DIV|IDIV
+    /* f7 */ {TEST,    am_Ew, am_Iw, am_Xx, DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM}, // TEST|NOT|NEG|MUL|IMUL|DIV|IDIV
+    /* f8 */ {CLC,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* f9 */ {STC,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* fa */ {CLI,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* fb */ {STI,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* fc */ {CLD,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* fd */ {STD,     am_Xx, am_Xx, am_Xx, _,                 _,                 _,         __},
+    /* fe */ {DEC,     am_Eb, am_Xx, am_Xx, DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM},
+    /* ff */ {INC,     am_Eb, am_Xx, am_Xx, DT_MOD_RM_RM_8,    _,                 _,         DF_HAS_MOD_RM},
 };
 // clang-format on
