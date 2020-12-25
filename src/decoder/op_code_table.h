@@ -2,6 +2,7 @@
 #define DECODER_OP_CODE_TABLE_H_
 
 #include "../instruction.h"
+#include "../streams.h"
 
 enum decode_type {
   // No operand for this position.
@@ -110,11 +111,14 @@ enum decode_flags {
   DF_HAS_MOD_RM = 0x01,
 };
 
+typedef void (*decode_func)(struct input_stream *stream, struct instruction *instruction);
+
 struct op_code_mapping {
   enum instruction_type instruction_type;
   enum addressing_method tmp1;
   enum addressing_method tmp2;
   enum addressing_method tmp3;
+  decode_func decode_func;
   enum decode_type destination_type;
   enum decode_type source_type;
   enum decode_type third_type;

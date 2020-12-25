@@ -91,35 +91,35 @@ struct address get_operand_indirect_address(struct operand *operand, struct cpu 
   struct address result;
 
   switch (operand->data.as_indirect.encoding) {
-    case ie_bx_si:
+    case mod_rm_mem_bx_si:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, SI));
       break;
 
-    case ie_bx_di:
+    case mod_rm_mem_bx_di:
       result = segment_offset(cpu_get_register_16(cpu, BX), cpu_get_register_16(cpu, DI));
       break;
 
-    case ie_bp_si:
+    case mod_rm_mem_bp_si:
       result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, SI));
       break;
 
-    case ie_bp_di:
+    case mod_rm_mem_bp_di:
       result = segment_offset(cpu_get_register_16(cpu, BP), cpu_get_register_16(cpu, DI));
       break;
 
-    case ie_si:
+    case mod_rm_mem_si:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, SI));
       break;
 
-    case ie_di:
+    case mod_rm_mem_di:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, DI));
       break;
 
-    case ie_bp:
+    case mod_rm_mem_bp:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BP));
       break;
 
-    case ie_bx:
+    case mod_rm_mem_bx:
       result = segment_offset(cpu_get_segment(cpu, DS), cpu_get_register_16(cpu, BX));
       break;
 

@@ -10,7 +10,6 @@ add_custom_target(assemble
 
 set(SOURCE_FILES
     # ${PROJECT_BINARY_DIR}/small.c
-    src/mod_rm.h
     src/address.h
     src/bus.c
     src/bus.h
@@ -18,10 +17,13 @@ set(SOURCE_FILES
     src/cpu.h
     src/cpu_decoder.c
     src/cpu_simple.c
+    src/decoder/decoder_funcs.c
+    src/decoder/decoder_funcs.h
     src/disassembler.c
     src/disassembler.h
     src/instruction.c
     src/instruction.h
+    src/mod_rm.h
     src/platform.h
     src/print_format.h
     src/registers.h

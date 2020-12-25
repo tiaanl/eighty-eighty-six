@@ -82,28 +82,27 @@ int decode_mem_operand(struct mod_rm mrm, enum operand_size size, struct input_s
 
   switch (mrm.mod) {
     case mod_rm_mod_indirect: {
-      enum indirect_encoding indirect_encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
-      if (indirect_encoding == ie_bp) {
+      if (mrm.reg_mem.as_mem == mod_rm_mem_bp) {
         result->type = ot_direct;
         result->data.as_direct.address = input_stream_fetch_u16(reader);
         return 2;
       } else {
         result->type = ot_indirect;
-        result->data.as_indirect.encoding = indirect_encoding;
+        result->data.as_indirect.encoding = mrm.reg_mem.as_mem;
         return 0;
       }
     }
 
     case mod_rm_mod_byte: {
       result->type = ot_displacement;
-      result->data.as_indirect.encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
+      result->data.as_indirect.encoding = mrm.reg_mem.as_mem;
       result->data.as_displacement.displacement = (i16)input_stream_fetch_i8(reader);
       return 1;
     }
 
     case mod_rm_mod_word: {
       result->type = ot_displacement;
-      result->data.as_indirect.encoding = (enum indirect_encoding)mrm.reg_mem.as_mem;
+      result->data.as_indirect.encoding = mrm.reg_mem.as_mem;
       result->data.as_displacement.displacement = input_stream_fetch_i16(reader);
       return 2;
     }
@@ -336,14 +335,18 @@ void decode_instruction(struct input_stream *reader, struct instruction *instruc
 
   instruction->type = mapping->instruction_type;
 
-  if (mapping->flags & DF_HAS_MOD_RM) {
-    decode_operand_with_mod_rm(mapping->destination_type, reader, &instruction->destination);
-    decode_operand_with_mod_rm(mapping->source_type, reader, &instruction->source);
-    decode_operand_with_mod_rm(mapping->third_type, reader, &instruction->third);
+  if (mapping->decode_func != 0) {
+    mapping->decode_func(reader, instruction);
   } else {
-    decode_operand(op_code, mapping->destination_type, reader, &instruction->destination);
-    decode_operand(op_code, mapping->source_type, reader, &instruction->source);
-    decode_operand(op_code, mapping->third_type, reader, &instruction->third);
+    if (mapping->flags & DF_HAS_MOD_RM) {
+      decode_operand_with_mod_rm(mapping->destination_type, reader, &instruction->destination);
+      decode_operand_with_mod_rm(mapping->source_type, reader, &instruction->source);
+      decode_operand_with_mod_rm(mapping->third_type, reader, &instruction->third);
+    } else {
+      decode_operand(op_code, mapping->destination_type, reader, &instruction->destination);
+      decode_operand(op_code, mapping->source_type, reader, &instruction->source);
+      decode_operand(op_code, mapping->third_type, reader, &instruction->third);
+    }
   }
 
 #if !defined(NDEBUG)

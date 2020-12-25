@@ -2,6 +2,7 @@
 #define INSTRUCTION_H_
 
 #include "address.h"
+#include "mod_rm.h"
 #include "platform.h"
 #include "registers.h"
 
@@ -24,24 +25,13 @@ enum operand_size {
   os_16,
 };
 
-enum indirect_encoding {
-  ie_bx_si,
-  ie_bx_di,
-  ie_bp_si,
-  ie_bp_di,
-  ie_si,
-  ie_di,
-  ie_bp,
-  ie_bx,
-};
-
 struct operand_displacement {
-  enum indirect_encoding encoding;
+  enum mod_rm_mem encoding;
   i16 displacement;
 };
 
 struct operand_indirect {
-  enum indirect_encoding encoding;
+  enum mod_rm_mem encoding;
 };
 
 struct operand_direct {

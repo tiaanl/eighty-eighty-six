@@ -8,7 +8,7 @@
 
 #define MNEMONIC "%-6s"
 
-const char *indirect_encoding_to_string(enum indirect_encoding encoding) {
+const char *indirect_encoding_to_string(enum mod_rm_mem encoding) {
   static const char *mapping[8] = {
       "bx:si", "bx:di", "bp:si", "bp:di", "si", "di", "bp", "bx",
   };
