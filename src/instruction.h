@@ -17,12 +17,15 @@ enum operand_type {
   ot_register,
   ot_immediate,
   ot_jump,
+  ot_offset,
   ot_segment_register,
+  ot_flags,
 };
 
 enum operand_size {
-  os_8,
-  os_16,
+  os_none, // Size is irrelevant
+  os_8,    // 8-bit
+  os_16,   // 16-bit
 };
 
 struct operand_displacement {
@@ -56,6 +59,10 @@ struct operand_jump {
   i16 offset;
 };
 
+struct operand_offset {
+  i16 offset;
+};
+
 struct operand_segment_register {
   enum segment_register reg;
 };
@@ -68,6 +75,7 @@ union operand_data {
   union operand_register as_register;
   union operand_immediate as_immediate;
   struct operand_jump as_jump;
+  struct operand_offset as_offset;
   struct operand_segment_register as_segment_register;
 };
 
