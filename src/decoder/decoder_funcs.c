@@ -1,6 +1,7 @@
 #include "decoder_funcs.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 
 static void operand_from_mod_rm_reg(struct operand *operand, enum operand_size size,
                                     enum mod_rm_reg reg) {
@@ -170,6 +171,16 @@ void operand_from_constant(struct operand *operand, enum operand_size size, u16 
   }
 }
 
+void operand_from_ds_si(struct operand *operand, enum operand_size size) {
+  operand->type = ot_ds_si;
+  operand->size = size;
+}
+
+void operand_from_es_di(struct operand *operand, enum operand_size size) {
+  operand->type = ot_es_di;
+  operand->size = size;
+}
+
 /* ============================================================================================== */
 
 void decode_Xx_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
@@ -332,6 +343,13 @@ void decode_DS_Xx_Xx(struct input_stream *stream, struct instruction *instructio
 }
 
 void decode_AX_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
+#if 0
+  u32 pos = stream->position;
+  stream->position = pos - 1;
+  printf("%02x", input_stream_fetch_u8(stream));
+  stream->position = pos;
+#endif
+
   operand_from_reg(&instruction->destination, os_16, AX);
   operand_none(&instruction->source);
   operand_none(&instruction->third);
@@ -597,35 +615,51 @@ void decode_Ow_AX_Xx(struct input_stream *stream, struct instruction *instructio
 }
 
 void decode_Xb_Yb_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_ds_si(&instruction->destination, os_8);
+  operand_from_es_di(&instruction->source, os_8);
+  operand_none(&instruction->third);
 }
 
 void decode_Xw_Yw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_ds_si(&instruction->destination, os_16);
+  operand_from_es_di(&instruction->source, os_16);
+  operand_none(&instruction->third);
 }
 
 void decode_Yb_AL_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_es_di(&instruction->destination, os_8);
+  operand_from_reg(&instruction->source, os_8, AL);
+  operand_none(&instruction->third);
 }
 
 void decode_Yw_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_es_di(&instruction->destination, os_16);
+  operand_from_reg(&instruction->source, os_16, AX);
+  operand_none(&instruction->third);
 }
 
 void decode_AL_Xb_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_reg(&instruction->destination, os_8, AL);
+  operand_from_ds_si(&instruction->source, os_8);
+  operand_none(&instruction->third);
 }
 
 void decode_AX_Xw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_reg(&instruction->destination, os_16, AX);
+  operand_from_ds_si(&instruction->source, os_16);
+  operand_none(&instruction->third);
 }
 
 void decode_AL_Yb_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_reg(&instruction->destination, os_8, AL);
+  operand_from_es_di(&instruction->source, os_8);
+  operand_none(&instruction->third);
 }
 
 void decode_AX_Yw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  assert(0);
+  operand_from_reg(&instruction->destination, os_16, AX);
+  operand_from_es_di(&instruction->source, os_16);
+  operand_none(&instruction->third);
 }
 
 void decode_Iw_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {

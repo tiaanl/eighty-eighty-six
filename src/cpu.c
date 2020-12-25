@@ -9,7 +9,7 @@
 
 const char *register_8_to_string(enum register_8 reg) {
   static const char *mapping[] = {
-      "al", "ah", "cl", "ch", "dl", "dh", "bl", "bh",
+      "ah", "al", "ch", "cl", "dh", "dl", "bh", "bl",
   };
 
   assert(reg < REGISTER_8_COUNT);
@@ -18,7 +18,7 @@ const char *register_8_to_string(enum register_8 reg) {
 
 const char *register_16_to_string(enum register_16 reg) {
   static const char *mapping[] = {
-      "ax", "bx", "cx", "dx", "bp", "sp", "si", "di",
+      "ax", "cx", "dx", "bx", "sp", "bp", "si", "di",
   };
 
   assert(reg < REGISTER_16_COUNT);

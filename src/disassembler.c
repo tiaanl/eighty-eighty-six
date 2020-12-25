@@ -10,7 +10,7 @@
 
 const char *indirect_encoding_to_string(enum mod_rm_mem encoding) {
   static const char *mapping[8] = {
-      "bx:si", "bx:di", "bp:si", "bp:di", "si", "di", "bp", "bx",
+      "bx+si", "bx+di", "bp+si", "bp+di", "si", "di", "bp", "bx",
   };
 
   return mapping[encoding];
@@ -67,7 +67,20 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       break;
 
     case ot_direct:
-      printf("[%s:" HEX_16 "]", segment_register_to_string(segment_register),
+      switch (operand->size) {
+        case os_8:
+          printf("BYTE ");
+          break;
+
+        case os_16:
+          printf("WORD ");
+          break;
+
+        default:
+          assert(0);
+          break;
+      }
+      printf("%s:" HEX_16, segment_register_to_string(segment_register),
              operand->data.as_direct.address);
       break;
 
@@ -88,7 +101,37 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       printf("%d", operand->data.as_jump.offset);
       break;
 
+    case ot_offset:
+      printf("%s:", segment_register_to_string(segment_register));
+      switch (operand->size) {
+        case os_8:
+          printf(HEX_8, operand->data.as_offset.offset);
+          break;
+
+        case os_16:
+          printf(HEX_16, operand->data.as_offset.offset);
+          break;
+
+        default:
+          assert(0);
+          break;
+      }
+
+      break;
+
+    case ot_ds_si:
+      printf("ds:si");
+      break;
+
+    case ot_es_di:
+      printf("es:di");
+      break;
+
     case ot_none:
+      break;
+
+    default:
+      assert(0);
       break;
   }
 }

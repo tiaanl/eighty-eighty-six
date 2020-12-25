@@ -20,6 +20,8 @@ enum operand_type {
   ot_offset,
   ot_segment_register,
   ot_flags,
+  ot_es_di,
+  ot_ds_si,
 };
 
 enum operand_size {

@@ -174,7 +174,7 @@ struct op_code_mapping op_code_table[] = {
     /* 80 */ {CMP,     am_Eb, am_Ib, am_Xx, decode_Eb_Ib_Xx, DT_MOD_RM_RM_8,    DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
     /* 81 */ {CMP,     am_Ew, am_Iw, am_Xx, decode_Ew_Iw_Xx, DT_MOD_RM_RM_16,   DT_IMM_16,         _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
     /* 82 */ {INVALID, am_Xx, am_Xx, am_Xx, decode_Xx_Xx_Xx, _,                 _,                 _,         DF_HAS_MOD_RM}, // Copy of 80??!
-    /* 83 */ {CMP,     am_Ew, am_Ib, am_Xx, decode_Ew_Ib_Xx, DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
+    /* 83 */ {CMP,     am_Eb, am_Ib, am_Xx, decode_Eb_Ib_Xx, DT_MOD_RM_RM_16,   DT_IMM_8,          _,         DF_HAS_MOD_RM}, // ADD|OR|ADC|SBB|AND|SUB|XOR
     /* 84 */ {TEST,    am_Eb, am_Gb, am_Xx, decode_Eb_Gb_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},
     /* 85 */ {TEST,    am_Ew, am_Gw, am_Xx, decode_Ew_Gw_Xx, DT_MOD_RM_RM_16,   DT_MOD_RM_REG_16,  _,         DF_HAS_MOD_RM},
     /* 86 */ {XCHG,    am_Eb, am_Gb, am_Xx, decode_Eb_Gb_Xx, DT_MOD_RM_RM_8,    DT_MOD_RM_REG_8,   _,         DF_HAS_MOD_RM},

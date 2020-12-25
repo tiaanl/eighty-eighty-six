@@ -1,15 +1,21 @@
 ; sum of odd numbers in the array.
 
     ;mov al, [10]
-    enter 10, 20
+    ;enter 10, 20
 
     ;mov dx, bx
     ;mov [ds:si], dx
 
     ;shr byte [bp], cl
 
-    ;inc cx
-    ;inc bx
+    inc ax
+    inc cx
+    inc dx
+    inc bx
+    inc sp
+    inc bp
+    inc si
+    inc di
 
     ;mov cs, ax
     ;jmp 0xACDC:0x5578

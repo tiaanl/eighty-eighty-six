@@ -290,6 +290,14 @@ u8 instruction_reader_writer_fetch_u8(void *context, u32 position) {
 }
 
 void decode_instruction(struct input_stream *reader, struct instruction *instruction) {
+#if 0
+  struct input_stream backup = *reader;
+  for (int i = 0; i < 6; ++i) {
+    printf(HEX_8 " ", input_stream_fetch_u8(&backup));
+  }
+  printf("\n");
+#endif // 0
+
 #if !defined(NDEBUG)
   struct input_stream wrapper;
   struct instruction_reader_writer irw;
@@ -332,22 +340,11 @@ void decode_instruction(struct input_stream *reader, struct instruction *instruc
   }
 
   struct op_code_mapping *mapping = &op_code_table[op_code];
+  assert(mapping->decode_func);
 
   instruction->type = mapping->instruction_type;
 
-  if (mapping->decode_func != 0) {
-    mapping->decode_func(reader, instruction);
-  } else {
-    if (mapping->flags & DF_HAS_MOD_RM) {
-      decode_operand_with_mod_rm(mapping->destination_type, reader, &instruction->destination);
-      decode_operand_with_mod_rm(mapping->source_type, reader, &instruction->source);
-      decode_operand_with_mod_rm(mapping->third_type, reader, &instruction->third);
-    } else {
-      decode_operand(op_code, mapping->destination_type, reader, &instruction->destination);
-      decode_operand(op_code, mapping->source_type, reader, &instruction->source);
-      decode_operand(op_code, mapping->third_type, reader, &instruction->third);
-    }
-  }
+  mapping->decode_func(reader, instruction);
 
 #if !defined(NDEBUG)
   instruction->instruction_size = irw.instruction_stream.position;
