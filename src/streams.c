@@ -1,13 +1,20 @@
 #include "streams.h"
 
-void input_stream_init(struct input_stream *stream, void *context, fetch_func fetch_func) {
+void input_stream_init(struct input_stream *stream, void *context, peek_func peek_func,
+                       advance_func advance_func) {
   stream->context = context;
-  stream->fetch_func = fetch_func;
-  stream->position = 0;
+  stream->peek_func = peek_func;
+  stream->advance_func = advance_func;
+}
+
+u8 input_stream_peek_u8(struct input_stream *stream) {
+  return stream->peek_func(stream->context);
 }
 
 u8 input_stream_fetch_u8(struct input_stream *stream) {
-  return stream->fetch_func(stream->context, stream->position++);
+  u8 value = stream->peek_func(stream->context);
+  stream->advance_func(stream->context, 1);
+  return value;
 }
 
 u16 input_stream_fetch_u16(struct input_stream *stream) {

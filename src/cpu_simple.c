@@ -427,7 +427,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x70: {
         // jo Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_of)) {
+        if (cpu_flag_is_set(cpu, f_overflow)) {
           cpu->ip += offset;
         }
         break;
@@ -436,7 +436,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x71: {
         // jno Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_of)) {
+        if (!cpu_flag_is_set(cpu, f_overflow)) {
           cpu->ip += offset;
         }
         break;
@@ -445,7 +445,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x72: {
         // jb Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_cf)) {
+        if (cpu_flag_is_set(cpu, f_carry)) {
           cpu->ip += offset;
         }
         break;
@@ -454,7 +454,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x73: {
         // jnb Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_cf)) {
+        if (!cpu_flag_is_set(cpu, f_carry)) {
           cpu->ip += offset;
         }
         break;
@@ -463,7 +463,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x74: {
         // jz Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_zf)) {
+        if (cpu_flag_is_set(cpu, f_zero)) {
           cpu->ip += offset;
         }
         break;
@@ -472,7 +472,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x75: {
         // jnz Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_zf)) {
+        if (!cpu_flag_is_set(cpu, f_zero)) {
           cpu->ip += offset;
         }
         break;
@@ -481,7 +481,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x76: {
         // jbe Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_cf) || cpu_flag_is_set(cpu, fl_zf)) {
+        if (cpu_flag_is_set(cpu, f_carry) || cpu_flag_is_set(cpu, f_zero)) {
           cpu->ip += offset;
         }
         break;
@@ -490,7 +490,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x77: {
         // jnbe Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_cf) && !cpu_flag_is_set(cpu, fl_zf)) {
+        if (!cpu_flag_is_set(cpu, f_carry) && !cpu_flag_is_set(cpu, f_zero)) {
           cpu->ip += offset;
         }
         break;
@@ -499,7 +499,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x78: {
         // js Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_sf)) {
+        if (cpu_flag_is_set(cpu, f_sign)) {
           cpu->ip += offset;
         }
         break;
@@ -508,7 +508,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x79: {
         // jns
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_sf)) {
+        if (!cpu_flag_is_set(cpu, f_sign)) {
           cpu->ip += offset;
         }
         break;
@@ -517,7 +517,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x7a: {
         // jp Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_pf)) {
+        if (cpu_flag_is_set(cpu, f_parity)) {
           cpu->ip += offset;
         }
         break;
@@ -526,7 +526,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x7b: {
         // jnp Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_pf)) {
+        if (!cpu_flag_is_set(cpu, f_parity)) {
           cpu->ip += offset;
         }
         break;
@@ -535,7 +535,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x7c: {
         // jl Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_sf) != cpu_flag_is_set(cpu, fl_of)) {
+        if (cpu_flag_is_set(cpu, f_sign) != cpu_flag_is_set(cpu, f_overflow)) {
           cpu->ip += offset;
         }
         break;
@@ -544,7 +544,7 @@ void cpu_run(struct cpu *cpu) {
       case 0x7d: {
         // jnl Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (cpu_flag_is_set(cpu, fl_sf) == cpu_flag_is_set(cpu, fl_of)) {
+        if (cpu_flag_is_set(cpu, f_sign) == cpu_flag_is_set(cpu, f_overflow)) {
           cpu->ip += offset;
         }
         break;
@@ -553,8 +553,8 @@ void cpu_run(struct cpu *cpu) {
       case 0x7e: {
         // jle Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if ((cpu_flag_is_set(cpu, fl_sf) != cpu_flag_is_set(cpu, fl_of)) ||
-            cpu_flag_is_set(cpu, fl_zf)) {
+        if ((cpu_flag_is_set(cpu, f_sign) != cpu_flag_is_set(cpu, f_overflow)) ||
+            cpu_flag_is_set(cpu, f_zero)) {
           cpu->ip += offset;
         }
         break;
@@ -563,8 +563,8 @@ void cpu_run(struct cpu *cpu) {
       case 0x7f: {
         // jnle Jb
         i8 offset = (i8)cpu_fetch_8(cpu);
-        if (!cpu_flag_is_set(cpu, fl_zf) &&
-            (cpu_flag_is_set(cpu, fl_sf) == cpu_flag_is_set(cpu, fl_of))) {
+        if (!cpu_flag_is_set(cpu, f_zero) &&
+            (cpu_flag_is_set(cpu, f_sign) == cpu_flag_is_set(cpu, f_overflow))) {
           cpu->ip += offset;
         }
         break;
@@ -718,7 +718,7 @@ void cpu_run(struct cpu *cpu) {
 
       case 0xfa: {
         // cli
-        cpu_clear_flag(cpu, fl_if);
+        cpu_clear_flag(cpu, f_interrupt);
         break;
       }
 

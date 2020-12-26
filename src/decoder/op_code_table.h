@@ -126,5 +126,6 @@ struct op_code_mapping {
 };
 
 extern struct op_code_mapping op_code_table[];
+extern struct op_code_mapping op_code_table_group_f7[];
 
 #endif // DECODER_OP_CODE_TABLE_H_

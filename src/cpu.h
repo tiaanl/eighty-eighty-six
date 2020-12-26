@@ -13,15 +13,15 @@ const char *register_16_to_string(enum register_16 reg);
 const char *segment_register_to_string(enum segment_register reg);
 
 enum flags {
-  fl_cf = 0x0001, // Carry
-  fl_pf = 0x0004, // Parity
-  fl_af = 0x0010, // Adjust
-  fl_zf = 0x0040, // Zero
-  fl_sf = 0x0080, // Sign
-  fl_tf = 0x0100, // Trap
-  fl_if = 0x0200, // Interrupt enable
-  fl_df = 0x0400, // Direction
-  fl_of = 0x0800, // Overflow
+  f_carry = 0x0001,     // Carry
+  f_parity = 0x0004,    // Parity
+  f_adjust = 0x0010,    // Adjust
+  f_zero = 0x0040,      // Zero
+  f_sign = 0x0080,      // Sign
+  f_trap = 0x0100,      // Trap
+  f_interrupt = 0x0200, // Interrupt enable
+  f_direction = 0x0400, // Direction
+  f_overflow = 0x0800,  // Overflow
 };
 
 union cpu_regs {

@@ -36,19 +36,34 @@ void print_immediate(const struct operand *operand) {
   }
 }
 
-void print_operand(const struct operand *operand, enum segment_register segment_register) {
+void print_pointer_size(enum operand_size size) {
+  switch (size) {
+    case os_8:
+      printf("BYTE PTR ");
+      break;
+
+    case os_16:
+      printf("WORD PTR ");
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void print_operand(const struct operand *operand, struct address address, u8 instruction_size,
+                   enum segment_register segment_register) {
   switch (operand->type) {
     case ot_indirect:
-      if (operand->size == os_8) {
-        printf("BYTE ");
-      } else if (operand->size == os_16) {
-        printf("WORD ");
-      }
+      print_pointer_size(operand->size);
       printf("[%s]", indirect_encoding_to_string(operand->data.as_indirect.encoding));
       break;
 
     case ot_displacement:
-      printf("%d", operand->data.as_displacement.displacement);
+      print_pointer_size(operand->size);
+      printf("[%s+" HEX_16 "]", indirect_encoding_to_string(operand->data.as_indirect.encoding),
+             operand->data.as_displacement.displacement);
       break;
 
     case ot_register:
@@ -67,19 +82,7 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       break;
 
     case ot_direct:
-      switch (operand->size) {
-        case os_8:
-          printf("BYTE ");
-          break;
-
-        case os_16:
-          printf("WORD ");
-          break;
-
-        default:
-          assert(0);
-          break;
-      }
+      print_pointer_size(operand->size);
       printf("%s:" HEX_16, segment_register_to_string(segment_register),
              operand->data.as_direct.address);
       break;
@@ -97,8 +100,15 @@ void print_operand(const struct operand *operand, enum segment_register segment_
       printf("%s", segment_register_to_string(operand->data.as_segment_register.reg));
       break;
 
-    case ot_jump:
-      printf("%d", operand->data.as_jump.offset);
+    case ot_jump: {
+      u16 new_addr = flatten_address(address) + instruction_size + operand->data.as_jump.offset;
+      printf(HEX_16, new_addr);
+      break;
+    }
+
+    case ot_far_jump:
+      printf(HEX_16 ":" HEX_16, operand->data.as_far_jump.segment,
+             operand->data.as_far_jump.offset);
       break;
 
     case ot_offset:
@@ -157,13 +167,15 @@ void disassemble(const struct instruction *instruction, struct address address) 
 
   print_mnemonic(instruction);
 
-  print_operand(&instruction->destination, instruction->segment_register);
+  print_operand(&instruction->destination, address, instruction->instruction_size,
+                instruction->segment_register);
 
   if (instruction->source.type != ot_none) {
     printf(", ");
   }
 
-  print_operand(&instruction->source, instruction->segment_register);
+  print_operand(&instruction->source, address, instruction->instruction_size,
+                instruction->segment_register);
 
   printf("\n");
 }

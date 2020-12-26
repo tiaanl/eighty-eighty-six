@@ -51,15 +51,15 @@ void print_registers(struct cpu *cpu) {
 
 static void set_flags_sign_zero_8(struct cpu *cpu, u8 value) {
   if (!value) {
-    cpu_set_flag(cpu, fl_zf);
+    cpu_set_flag(cpu, f_zero);
   } else {
-    cpu_clear_flag(cpu, fl_zf);
+    cpu_clear_flag(cpu, f_zero);
   }
 
   if (value & 0x80) {
-    cpu_set_flag(cpu, fl_sf);
+    cpu_set_flag(cpu, f_sign);
   } else {
-    cpu_clear_flag(cpu, fl_sf);
+    cpu_clear_flag(cpu, f_sign);
   }
 }
 
@@ -69,21 +69,21 @@ static void set_flags_subtract_8(struct cpu *cpu, u8 destination, u8 source) {
   set_flags_sign_zero_8(cpu, (u8)val);
 
   if (val & 0xff00) {
-    cpu_set_flag(cpu, fl_cf);
+    cpu_set_flag(cpu, f_carry);
   } else {
-    cpu_clear_flag(cpu, fl_cf);
+    cpu_clear_flag(cpu, f_carry);
   }
 
   if ((val ^ destination) & (destination ^ source) & 0x80) {
-    cpu_set_flag(cpu, fl_of);
+    cpu_set_flag(cpu, f_overflow);
   } else {
-    cpu_clear_flag(cpu, fl_of);
+    cpu_clear_flag(cpu, f_overflow);
   }
 
   if ((destination ^ source ^ val) & 0x10) {
-    cpu_set_flag(cpu, fl_af);
+    cpu_set_flag(cpu, f_adjust);
   } else {
-    cpu_clear_flag(cpu, fl_af);
+    cpu_clear_flag(cpu, f_adjust);
   }
 }
 
@@ -279,7 +279,7 @@ static void set_operand_value_16(struct operand *operand, struct cpu *cpu, u16 v
 }
 
 static void interpret_add(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == ADD);
+  assert(instruction->type == it_add);
 
   u8 value8;
   u16 value16;
@@ -325,7 +325,7 @@ static void interpret_add(struct cpu *cpu, struct instruction *instruction) {
 }
 
 static void interpret_inc(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == INC);
+  assert(instruction->type == it_inc);
 
   switch (instruction->destination.size) {
     case os_8: {
@@ -359,7 +359,7 @@ static void interpret_inc(struct cpu *cpu, struct instruction *instruction) {
 }
 
 static void interpret_mov(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == MOV);
+  assert(instruction->type == it_mov);
 
   u8 value8;
   u16 value16;
@@ -392,10 +392,10 @@ static void interpret_mov(struct cpu *cpu, struct instruction *instruction) {
 }
 
 static void interpret_test(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == TEST);
+  assert(instruction->type == it_test);
 
-  cpu_clear_flag(cpu, fl_cf);
-  cpu_clear_flag(cpu, fl_of);
+  cpu_clear_flag(cpu, f_carry);
+  cpu_clear_flag(cpu, f_overflow);
 
   switch (instruction->destination.size) {
     case os_8: {
@@ -403,8 +403,8 @@ static void interpret_test(struct cpu *cpu, struct instruction *instruction) {
       u8 source = get_operand_value_8(&instruction->source, cpu);
       u8 r = destination & source;
 
-      cpu_set_flag_value(cpu, fl_sf, r & 0xff);
-      cpu_set_flag_value(cpu, fl_zf, !r);
+      cpu_set_flag_value(cpu, f_sign, r & 0xff);
+      cpu_set_flag_value(cpu, f_zero, !r);
 
       // TODO: More flags are affected by TEST
       break;
@@ -415,8 +415,8 @@ static void interpret_test(struct cpu *cpu, struct instruction *instruction) {
       u16 source = get_operand_value_16(&instruction->source, cpu);
       u16 r = destination & source;
 
-      cpu_set_flag_value(cpu, fl_sf, r & 0xffff);
-      cpu_set_flag_value(cpu, fl_zf, !r);
+      cpu_set_flag_value(cpu, f_sign, r & 0xffff);
+      cpu_set_flag_value(cpu, f_zero, !r);
       break;
     }
 
@@ -426,7 +426,7 @@ static void interpret_test(struct cpu *cpu, struct instruction *instruction) {
 }
 
 static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == LOOP);
+  assert(instruction->type == it_loop);
 
   switch (instruction->destination.size) {
     case os_8: {
@@ -455,17 +455,17 @@ static void interpret_loop(struct cpu *cpu, struct instruction *instruction) {
 static void interpret_push(struct cpu *cpu, struct instruction *instruction) {
   (void)cpu;
 
-  assert(instruction->type == PUSH);
+  assert(instruction->type == it_push);
 }
 
 static void interpret_pop(struct cpu *cpu, struct instruction *instruction) {
   (void)cpu;
 
-  assert(instruction->type == POP);
+  assert(instruction->type == it_pop);
 }
 
 static void interpret_jmp(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == JMP);
+  assert(instruction->type == it_jmp);
 
   switch (instruction->destination.type) {
     case ot_direct_with_segment: {
@@ -482,32 +482,32 @@ static void interpret_jmp(struct cpu *cpu, struct instruction *instruction) {
 
 static void interpret_instruction(struct cpu *cpu, struct instruction *instruction) {
   switch (instruction->type) {
-    case ADD:
+    case it_add:
       interpret_add(cpu, instruction);
       break;
 
-    case HLT:
+    case it_hlt:
       // Handle this somewhere else.
       assert(0);
       break;
 
-    case INC:
+    case it_inc:
       interpret_inc(cpu, instruction);
       break;
 
-    case LOOP:
+    case it_loop:
       interpret_loop(cpu, instruction);
       break;
 
-    case MOV:
+    case it_mov:
       interpret_mov(cpu, instruction);
       break;
 
-    case TEST:
+    case it_test:
       interpret_test(cpu, instruction);
       break;
 
-    case CMP: {
+    case it_cmp: {
       if (instruction->destination.size == os_8) {
         u8 destination = get_operand_value_8(&instruction->destination, cpu);
         u8 source = get_operand_value_8(&instruction->source, cpu);
@@ -516,98 +516,98 @@ static void interpret_instruction(struct cpu *cpu, struct instruction *instructi
       break;
     }
 
-    case PUSH:
+    case it_push:
       interpret_push(cpu, instruction);
       break;
 
-    case POP:
+    case it_pop:
       interpret_pop(cpu, instruction);
       break;
 
-    case JMP:
+    case it_jmp:
       interpret_jmp(cpu, instruction);
       break;
 
-    case JB: {
+    case it_jb: {
       assert(instruction->destination.type == ot_jump);
-      if (cpu_flag_is_set(cpu, fl_cf)) {
+      if (cpu_flag_is_set(cpu, f_carry)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JNB: {
+    case it_jnb: {
       assert(instruction->destination.type == ot_jump);
-      if (!cpu_flag_is_set(cpu, fl_cf)) {
+      if (!cpu_flag_is_set(cpu, f_carry)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JZ: {
+    case it_jz: {
       assert(instruction->destination.type == ot_jump);
-      if (cpu_flag_is_set(cpu, fl_zf)) {
+      if (cpu_flag_is_set(cpu, f_zero)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JNZ: {
+    case it_jnz: {
       assert(instruction->destination.type == ot_jump);
-      if (!cpu_flag_is_set(cpu, fl_zf)) {
+      if (!cpu_flag_is_set(cpu, f_zero)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JP: {
+    case it_jp: {
       assert(instruction->destination.type == ot_jump);
-      if (cpu_flag_is_set(cpu, fl_pf)) {
+      if (cpu_flag_is_set(cpu, f_parity)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JNP: {
+    case it_jnp: {
       assert(instruction->destination.type == ot_jump);
-      if (!cpu_flag_is_set(cpu, fl_pf)) {
+      if (!cpu_flag_is_set(cpu, f_parity)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JS: {
+    case it_js: {
       assert(instruction->destination.type == ot_jump);
-      if (cpu_flag_is_set(cpu, fl_sf)) {
+      if (cpu_flag_is_set(cpu, f_sign)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case JNS: {
+    case it_jns: {
       assert(instruction->destination.type == ot_jump);
-      if (!cpu_flag_is_set(cpu, fl_sf)) {
+      if (!cpu_flag_is_set(cpu, f_sign)) {
         cpu->ip += instruction->destination.data.as_jump.offset;
       }
       break;
     }
 
-    case CLI: {
-      cpu_clear_flag(cpu, fl_if);
+    case it_cli: {
+      cpu_clear_flag(cpu, f_interrupt);
       break;
     }
 
-    case SAHF: {
+    case it_sahf: {
       cpu->flags = (cpu->flags & 0xff00) | cpu->regs.reg_8[AH];
       break;
     }
 
-    case LAHF: {
+    case it_lahf: {
       cpu->regs.reg_8[AH] = cpu->flags & 0xff;
       break;
     }
 
-    case NOOP:
+    case it_noop:
       break;
 
     default:

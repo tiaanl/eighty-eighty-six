@@ -1,13 +1,27 @@
 #include "decoder_funcs.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 
-static void operand_from_mod_rm_reg(struct operand *operand, enum operand_size size,
-                                    enum mod_rm_reg reg) {
+static void operand_from_reg(struct operand *operand, enum operand_size size, u8 reg) {
+  static enum register_8 reg_8_mapping[] = {
+      AL, CL, DL, BL, AH, CH, DH, BH,
+  };
+
   operand->type = ot_register;
   operand->size = size;
-  operand->data.as_register.reg_8 = (enum register_8)reg;
+  switch (size) {
+    case os_8:
+      operand->data.as_register.reg_8 = reg_8_mapping[reg];
+      break;
+
+    case os_16:
+      operand->data.as_register.reg_16 = reg;
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
 }
 
 static void operand_from_mod_rm_reg_mem(struct operand *operand, enum operand_size size,
@@ -46,26 +60,7 @@ static void operand_from_mod_rm_reg_mem(struct operand *operand, enum operand_si
       break;
 
     case mod_rm_mod_register:
-      operand_from_mod_rm_reg(operand, size, reg_mem.as_reg);
-      break;
-
-    default:
-      assert(0);
-      break;
-  }
-}
-
-static void operand_from_reg(struct operand *operand, enum operand_size size, u8 reg) {
-  operand->type = ot_register;
-  operand->size = size;
-  switch (size) {
-
-    case os_8:
-      operand->data.as_register.reg_8 = reg;
-      break;
-
-    case os_16:
-      operand->data.as_register.reg_16 = reg;
+      operand_from_reg(operand, size, reg_mem.as_reg);
       break;
 
     default:
@@ -119,6 +114,14 @@ void operand_from_jump(struct operand *operand, enum operand_size size,
     default:
       assert(0);
   }
+}
+
+void operand_from_far_jump(struct operand *operand, struct input_stream *stream) {
+  operand->type = ot_far_jump;
+  operand->size = os_16;
+
+  operand->data.as_far_jump.offset = input_stream_fetch_u16(stream);
+  operand->data.as_far_jump.segment = input_stream_fetch_u16(stream);
 }
 
 void operand_from_mod_rm_seg_reg(struct operand *operand, enum operand_size size,
@@ -193,7 +196,7 @@ void decode_Eb_Gb_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem, false);
-  operand_from_mod_rm_reg(&instruction->source, os_8, mrm.reg);
+  operand_from_reg(&instruction->source, os_8, mrm.reg);
   operand_none(&instruction->third);
 }
 
@@ -202,14 +205,14 @@ void decode_Ew_Gw_Xx(struct input_stream *stream, struct instruction *instructio
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
                               false);
-  operand_from_mod_rm_reg(&instruction->source, os_16, mrm.reg);
+  operand_from_reg(&instruction->source, os_16, mrm.reg);
   operand_none(&instruction->third);
 }
 
 void decode_Gb_Eb_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_8, mrm.reg);
+  operand_from_reg(&instruction->destination, os_8, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem, false);
   operand_none(&instruction->third);
 }
@@ -217,7 +220,7 @@ void decode_Gb_Eb_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Gw_Ew_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
+  operand_from_reg(&instruction->destination, os_16, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
   operand_none(&instruction->third);
 }
@@ -418,7 +421,7 @@ void decode_Jb_Xx_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Gw_Ma_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
+  operand_from_reg(&instruction->destination, os_16, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, true);
   operand_none(&instruction->third);
 }
@@ -426,7 +429,7 @@ void decode_Gw_Ma_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Gw_Ew_Ib(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
+  operand_from_reg(&instruction->destination, os_16, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
   operand_from_immediate(&instruction->third, os_8, stream);
 }
@@ -434,7 +437,7 @@ void decode_Gw_Ew_Ib(struct input_stream *stream, struct instruction *instructio
 void decode_Gw_Ew_Iw(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
+  operand_from_reg(&instruction->destination, os_16, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
   operand_from_immediate(&instruction->third, os_16, stream);
 }
@@ -506,7 +509,7 @@ void decode_Ew_Sw_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Gw_M_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
+  operand_from_reg(&instruction->destination, os_16, mrm.reg);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, true);
   operand_none(&instruction->third);
 }
@@ -536,9 +539,9 @@ void decode_Ew_Xx_Xx(struct input_stream *stream, struct instruction *instructio
   operand_none(&instruction->third);
 }
 
-void decode_AX_CX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, CX);
+void decode_CX_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, CX);
+  operand_from_reg(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
@@ -548,39 +551,47 @@ void decode_AX_DX_Xx(struct input_stream *stream, struct instruction *instructio
   operand_none(&instruction->third);
 }
 
-void decode_AX_BX_Xx(struct input_stream *stream, struct instruction *instruction) {
+void decode_AX_Ew_Xx(struct input_stream *stream, struct instruction *instruction) {
+  struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
+
   operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, BX);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
   operand_none(&instruction->third);
 }
 
-void decode_AX_SP_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, SP);
+void decode_BX_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, BX);
+  operand_from_reg(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
-void decode_AX_BP_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, BP);
+void decode_SP_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, SP);
+  operand_from_reg(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
-void decode_AX_SI_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, SI);
+void decode_BP_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, BP);
+  operand_from_reg(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
-void decode_AX_DI_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_reg(&instruction->destination, os_16, AX);
-  operand_from_reg(&instruction->source, os_16, DI);
+void decode_SI_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, SI);
+  operand_from_reg(&instruction->source, os_16, AX);
+  operand_none(&instruction->third);
+}
+
+void decode_DI_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
+  operand_from_reg(&instruction->destination, os_16, DI);
+  operand_from_reg(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
 void decode_Ap_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_jump(&instruction->destination, os_16, stream);
-  operand_from_reg(&instruction->source, os_16, DI);
+  operand_from_far_jump(&instruction->destination, stream);
+  operand_none(&instruction->source);
   operand_none(&instruction->third);
 }
 
