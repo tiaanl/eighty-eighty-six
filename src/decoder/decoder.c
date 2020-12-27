@@ -23,10 +23,10 @@ struct instruction_reader_writer {
 static struct op_code_mapping *instruction_group_mapping(u8 op_code, struct input_stream *stream) {
   switch (op_code) {
     case 0xf7: {
-      u8 mod_rm_byte = input_stream_peek_u8(stream);
-      printf(HEX_8 "\n", input_stream_peek_u8(stream));
-      printf(HEX_8 "\n", input_stream_peek_u8(stream));
-      printf(HEX_8 "\n", input_stream_peek_u8(stream));
+      u8 mod_rm_byte = input_stream_fetch_u8(stream);
+      printf(HEX_8 "\n", input_stream_fetch_u8(stream));
+      printf(HEX_8 "\n", input_stream_fetch_u8(stream));
+      printf(HEX_8 "\n", input_stream_fetch_u8(stream));
       struct mod_rm mrm = decode_mod_rm(mod_rm_byte);
       return &op_code_table_group_f7[mrm.reg];
     }
@@ -63,7 +63,7 @@ void decode_instruction(struct input_stream *reader, struct instruction *instruc
   printf("\n");
 #endif // 0
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) && 0
   struct input_stream wrapper;
   struct instruction_reader_writer irw;
   irw.original = reader;
@@ -117,7 +117,7 @@ void decode_instruction(struct input_stream *reader, struct instruction *instruc
 
   mapping->decode_func(reader, instruction);
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) && 0
   instruction->instruction_size = irw.instruction_stream.position;
 #endif
 }
