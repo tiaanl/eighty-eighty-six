@@ -4,7 +4,6 @@
 #include "../instruction.h"
 #include "../streams.h"
 
-void decode_AH_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AL_DX_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AL_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AL_Ob_Xx(struct input_stream *stream, struct instruction *instruction);
@@ -16,35 +15,14 @@ void decode_AX_Ib_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_AX_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AX_Ow_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AX_Xw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_AX_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AX_Yw_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Ap_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BH_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BL_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BP_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BP_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BP_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BX_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BX_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_BX_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_CH_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_CL_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_CS_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_CX_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_CX_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_CX_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DH_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DI_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DI_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DI_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DL_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_DS_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_DX_AL_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_DX_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DX_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_DX_Xb_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_DX_Xw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_DX_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_ES_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Eb_1_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Eb_Gb_Xx(struct input_stream *stream, struct instruction *instruction);
@@ -72,12 +50,10 @@ void decode_Jb_Xx_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Jw_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Ob_AL_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Ow_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SI_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SI_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SI_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SP_AX_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SP_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
-void decode_SP_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
+void decode_Rb_Ib_Xx(struct input_stream *stream, struct instruction *instruction);
+void decode_AX_Rw_Xx(struct input_stream *stream, struct instruction *instruction);
+void decode_Rw_Iw_Xx(struct input_stream *stream, struct instruction *instruction);
+void decode_Rw_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_SS_Xx_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Sw_Ew_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_Xb_Yb_Xx(struct input_stream *stream, struct instruction *instruction);

@@ -57,24 +57,13 @@ enum addressing_method {
   am_Xx,
 
   // General registers (8-bit)
+  am_Rb,
   am_AL,
-  am_CL,
-  am_DL,
-  am_BL,
-  am_AH,
-  am_CH,
-  am_DH,
-  am_BH,
 
   // General registers (16-bit)
+  am_Rw,
   am_AX,
-  am_CX,
   am_DX,
-  am_BX,
-  am_SP,
-  am_BP,
-  am_SI,
-  am_DI,
 
   // Segment registers
   am_ES,

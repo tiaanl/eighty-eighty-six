@@ -17,6 +17,15 @@
     inc si
     inc di
 
+    dec ax
+    dec cx
+    dec dx
+    dec bx
+    dec sp
+    dec bp
+    dec si
+    dec di
+
     ;mov cs, ax
     ;jmp 0xACDC:0x5578
     ;mov [cs:0x5578], ax

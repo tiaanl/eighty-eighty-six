@@ -49,12 +49,16 @@ int main(int argc, char *argv[]) {
   input_stream_init(&in_stream, &data, binary_data_fetch);
   // input_stream_set_position(&reader, data.data_size - 0x10);
 
+  static char buffer[128];
+  static size_t buffer_size = sizeof(buffer);
+
   while (in_stream.position < data.data_size) {
     struct instruction instruction;
     instruction_init(&instruction);
     unsigned pos = in_stream.position;
     decode_instruction(&in_stream, &instruction);
-    disassemble(&instruction, segment_offset(0, pos));
+    disassemble(buffer, buffer_size, &instruction, segment_offset(0, pos));
+    printf("%s\n", buffer);
   }
 
   return 0;

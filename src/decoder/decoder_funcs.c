@@ -258,92 +258,8 @@ void decode_AL_Ib_Xx(struct input_stream *stream, struct instruction *instructio
   operand_none(&instruction->third);
 }
 
-void decode_CL_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, CL);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_DL_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, DL);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_BL_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, BL);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_AH_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, AH);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_CH_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, CH);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_DH_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, DH);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_BH_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_8(&instruction->destination, os_8, BH);
-  operand_from_immediate(&instruction->source, os_8, stream);
-  operand_none(&instruction->third);
-}
-
 void decode_AX_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
   operand_from_register_16(&instruction->destination, os_16, AX);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_CX_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, CX);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_DX_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, DX);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_BX_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, BX);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_SP_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, SP);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_BP_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, BP);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_SI_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, SI);
-  operand_from_immediate(&instruction->source, os_16, stream);
-  operand_none(&instruction->third);
-}
-
-void decode_DI_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_register_16(&instruction->destination, os_16, DI);
   operand_from_immediate(&instruction->source, os_16, stream);
   operand_none(&instruction->third);
 }
@@ -376,70 +292,6 @@ void decode_DS_Xx_Xx(struct input_stream *stream, struct instruction *instructio
   UNUSED(stream);
 
   operand_from_segment_register(&instruction->destination, DS);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_AX_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, AX);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_CX_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, CX);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_DX_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, DX);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_BX_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, BX);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_SP_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, SP);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_BP_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, BP);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_SI_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, SI);
-  operand_none(&instruction->source);
-  operand_none(&instruction->third);
-}
-
-void decode_DI_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, DI);
   operand_none(&instruction->source);
   operand_none(&instruction->third);
 }
@@ -586,14 +438,6 @@ void decode_Ew_Xx_Xx(struct input_stream *stream, struct instruction *instructio
   operand_none(&instruction->third);
 }
 
-void decode_CX_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, CX);
-  operand_from_register_16(&instruction->source, os_16, AX);
-  operand_none(&instruction->third);
-}
-
 void decode_AX_DX_Xx(struct input_stream *stream, struct instruction *instruction) {
   UNUSED(stream);
 
@@ -607,46 +451,6 @@ void decode_AX_Ew_Xx(struct input_stream *stream, struct instruction *instructio
 
   operand_from_register_16(&instruction->destination, os_16, AX);
   operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
-  operand_none(&instruction->third);
-}
-
-void decode_BX_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, BX);
-  operand_from_register_16(&instruction->source, os_16, AX);
-  operand_none(&instruction->third);
-}
-
-void decode_SP_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, SP);
-  operand_from_register_16(&instruction->source, os_16, AX);
-  operand_none(&instruction->third);
-}
-
-void decode_BP_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, BP);
-  operand_from_register_16(&instruction->source, os_16, AX);
-  operand_none(&instruction->third);
-}
-
-void decode_SI_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, SI);
-  operand_from_register_16(&instruction->source, os_16, AX);
-  operand_none(&instruction->third);
-}
-
-void decode_DI_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  UNUSED(stream);
-
-  operand_from_register_16(&instruction->destination, os_16, DI);
-  operand_from_register_16(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
 
@@ -819,5 +623,37 @@ void decode_DX_AX_Xx(struct input_stream *stream, struct instruction *instructio
 
   operand_from_register_16(&instruction->destination, os_16, DX);
   operand_from_register_16(&instruction->source, os_16, AX);
+  operand_none(&instruction->third);
+}
+
+void decode_Rw_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
+  u8 op_code = input_stream_peek_u8(stream, -1);
+
+  operand_from_mod_rm_reg(&instruction->destination, os_16, op_code & 0x07);
+  operand_none(&instruction->source);
+  operand_none(&instruction->third);
+}
+
+void decode_Rb_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
+  u8 op_code = input_stream_peek_u8(stream, -1);
+
+  operand_from_mod_rm_reg(&instruction->destination, os_8, op_code & 0x07);
+  operand_from_immediate(&instruction->source, os_8, stream);
+  operand_none(&instruction->third);
+}
+
+void decode_Rw_Iw_Xx(struct input_stream *stream, struct instruction *instruction) {
+  u8 op_code = input_stream_peek_u8(stream, -1);
+
+  operand_from_mod_rm_reg(&instruction->destination, os_16, op_code & 0x07);
+  operand_from_immediate(&instruction->source, os_16, stream);
+  operand_none(&instruction->third);
+}
+
+void decode_AX_Rw_Xx(struct input_stream *stream, struct instruction *instruction) {
+  u8 op_code = input_stream_peek_u8(stream, -1);
+
+  operand_from_register_16(&instruction->destination, os_16, AX);
+  operand_from_mod_rm_reg(&instruction->source, os_16, op_code & 0x07);
   operand_none(&instruction->third);
 }

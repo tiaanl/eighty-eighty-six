@@ -4,6 +4,7 @@
 #include "address.h"
 #include "instruction.h"
 
-void disassemble(const struct instruction *instruction, struct address address);
+int disassemble(char *buffer, size_t buffer_size, const struct instruction *instruction,
+                struct address address);
 
 #endif // DISASSEMBLER_H_

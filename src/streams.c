@@ -6,8 +6,27 @@ void input_stream_init(struct input_stream *stream, void *context, fetch_func fe
   stream->position = 0;
 }
 
+u8 input_stream_peek_u8(struct input_stream *stream, i32 offset) {
+  return stream->fetch_func(stream->context, stream->position + offset);
+}
+
+u16 input_stream_peek_u16(struct input_stream *stream, i32 offset) {
+  return stream->fetch_func(stream->context, stream->position + offset) +
+         (stream->fetch_func(stream->context, stream->position + offset + 1) << 8);
+}
+
+i8 input_stream_peek_i8(struct input_stream *stream, i32 offset) {
+  return (i8)input_stream_peek_u8(stream, offset);
+}
+
+i16 input_stream_peek_i16(struct input_stream *stream, i32 offset) {
+  return (i16)input_stream_peek_u16(stream, offset);
+}
+
 u8 input_stream_fetch_u8(struct input_stream *stream) {
-  return stream->fetch_func(stream->context, stream->position++);
+  u8 value = stream->fetch_func(stream->context, stream->position);
+  stream->position++;
+  return value;
 }
 
 u16 input_stream_fetch_u16(struct input_stream *stream) {
