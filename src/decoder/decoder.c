@@ -63,6 +63,11 @@ void decode_instruction(struct input_stream *stream, struct instruction *instruc
     op_code = input_stream_fetch_u8(stream);
   }
 
+  // FIXME: We skip the rep & repne prefixes for now
+  if (op_code == 0xf2 || op_code == 0xf3) {
+    op_code = input_stream_fetch_u8(stream);
+  }
+
   struct op_code_mapping *mapping = &op_code_table[op_code];
   if (mapping->instruction_type == it_group) {
     mapping = instruction_group_mapping(op_code, stream);
