@@ -158,6 +158,8 @@ int print_buffer(char *buffer, size_t buffer_size, const struct instruction *ins
 static enum instruction_type no_operand_mnemonics[] = {
     it_lodsb,
     it_lodsw,
+    it_popf,
+    it_pushf,
 };
 
 static bool must_print_operands(enum instruction_type it) {
