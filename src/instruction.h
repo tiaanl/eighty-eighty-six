@@ -209,10 +209,8 @@ struct instruction {
   struct operand source;
   struct operand third;
 
-#if !defined(NDEBUG)
   u8 buffer[16];
   u8 instruction_size;
-#endif
 };
 
 // typedef void (*execute_func)(struct cpu *cpu, struct instruction *instruction);

@@ -142,7 +142,6 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
   }
 }
 
-#if !defined(NDEBUG)
 int print_buffer(char *buffer, size_t buffer_size, const struct instruction *instruction) {
   int inc = 0;
   unsigned i = 0;
@@ -155,7 +154,6 @@ int print_buffer(char *buffer, size_t buffer_size, const struct instruction *ins
 
   return inc;
 }
-#endif
 
 static enum instruction_type no_operand_mnemonics[] = {
     it_lodsb,
@@ -179,9 +177,7 @@ int disassemble(char *buffer, size_t buffer_size, const struct instruction *inst
   inc += snprintf(buffer + inc, buffer_size - inc, HEX_16 ":" HEX_16 "  ", address.segment,
                   address.offset);
 
-#if !defined(NDEBUG)
   inc = print_buffer(buffer + inc, buffer_size - inc, instruction);
-#endif
 
   inc += print_mnemonic(buffer + inc, buffer_size - inc, instruction);
 
