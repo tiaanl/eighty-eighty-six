@@ -1,8 +1,8 @@
 #ifndef DECODER_H_
 #define DECODER_H_
 
-#include "../instruction.h"
-#include "../streams.h"
+#include <base/streams.h>
+#include <decoder/instruction.h>
 
 void decode_instruction(struct input_stream *stream, struct instruction *instruction);
 

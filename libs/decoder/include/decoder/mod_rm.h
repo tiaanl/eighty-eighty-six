@@ -1,9 +1,8 @@
 #ifndef MOD_RM_H_
 #define MOD_RM_H_
 
-#include "platform.h"
-
 #include <assert.h>
+#include <base/platform.h>
 
 #define MOD_RM_MOD(x) ((x) >> 0x06)
 #define MOD_RM_REG(x) ((x) >> 0x03 & 0x07)
@@ -67,16 +66,17 @@ static inline struct mod_rm decode_mod_rm(u8 byte) {
   return result;
 }
 
-static inline u8 encode_mod_rm_values(enum mod_rm_mod mod, enum mod_rm_reg reg, union mod_rm_reg_mem rm) {
-    assert(mod <= (1 << 2));
-    assert(reg <= (1 << 3));
-    assert(rm.as_mem <= (1 << 3));
+static inline u8 encode_mod_rm_values(enum mod_rm_mod mod, enum mod_rm_reg reg,
+                                      union mod_rm_reg_mem rm) {
+  assert(mod <= (1 << 2));
+  assert(reg <= (1 << 3));
+  assert(rm.as_mem <= (1 << 3));
 
-    return (((u8)mod & 0x03) << 0x06) | (((u8)reg & 0x07) << 3) | ((u8)rm.as_mem & 0x07);
+  return (((u8)mod & 0x03) << 0x06) | (((u8)reg & 0x07) << 3) | ((u8)rm.as_mem & 0x07);
 }
 
 static inline u8 encode_mod_rm(struct mod_rm mod_rm) {
-    return encode_mod_rm_values(mod_rm.mod, mod_rm.reg, mod_rm.reg_mem);
+  return encode_mod_rm_values(mod_rm.mod, mod_rm.reg, mod_rm.reg_mem);
 }
 
 #endif // MOD_RM_H_

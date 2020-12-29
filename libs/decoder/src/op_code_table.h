@@ -1,8 +1,9 @@
 #ifndef DECODER_OP_CODE_TABLE_H_
 #define DECODER_OP_CODE_TABLE_H_
 
-#include "../instruction.h"
-#include "../streams.h"
+#include "decoder/instruction.h"
+
+#include <base/streams.h>
 
 enum decode_type {
   // No operand for this position.

@@ -8,10 +8,6 @@
 
 struct bus;
 
-const char *register_8_to_string(enum register_8 reg);
-const char *register_16_to_string(enum register_16 reg);
-const char *segment_register_to_string(enum segment_register reg);
-
 enum flags {
   f_carry = 0x0001,     // Carry
   f_parity = 0x0004,    // Parity

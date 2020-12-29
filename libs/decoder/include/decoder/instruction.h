@@ -1,11 +1,9 @@
 #ifndef INSTRUCTION_H_
 #define INSTRUCTION_H_
 
-#include "address.h"
-#include "mod_rm.h"
-#include "platform.h"
-#include "registers.h"
-
+#include <base/platform.h>
+#include <decoder/mod_rm.h>
+#include <decoder/registers.h>
 #include <string.h>
 
 enum operand_type {
@@ -45,7 +43,8 @@ struct operand_direct {
 };
 
 struct operand_direct_with_segment {
-  struct address address;
+  u16 segment;
+  u16 offset;
 };
 
 union operand_register {

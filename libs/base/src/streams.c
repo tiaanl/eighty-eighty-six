@@ -1,4 +1,4 @@
-#include "streams.h"
+#include "base/streams.h"
 
 void input_stream_init(struct input_stream *stream, void *context, fetch_func fetch_func) {
   stream->context = context;

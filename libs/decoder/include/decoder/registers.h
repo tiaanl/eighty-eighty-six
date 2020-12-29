@@ -37,4 +37,8 @@ enum segment_register {
   SEGMENT_REGISTER_COUNT,
 };
 
+const char *register_8_to_string(enum register_8 reg);
+const char *register_16_to_string(enum register_16 reg);
+const char *segment_register_to_string(enum segment_register reg);
+
 #endif // REGISTERS_H_

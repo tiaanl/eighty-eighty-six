@@ -1,5 +1,5 @@
-#include "mod_rm.h"
-#include "testing.h"
+#include "decoder/mod_rm.h"
+// #include "testing.h"
 
 #if defined(TESTING)
 void test_decoders(void) {

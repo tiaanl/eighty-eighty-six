@@ -1,8 +1,7 @@
-#include "decoder/decoder.h"
-#include "disassembler.h"
-#include "platform.h"
-#include "streams.h"
-
+#include <base/platform.h>
+#include <base/streams.h>
+#include <decoder/decoder.h>
+#include <disassembler/disassembler.h>
 #include <malloc.h>
 #include <stdio.h>
 

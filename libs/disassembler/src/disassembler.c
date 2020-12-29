@@ -1,9 +1,7 @@
-#include "disassembler.h"
-
-#include "cpu.h"
-#include "print_format.h"
+#include "disassembler/disassembler.h"
 
 #include <assert.h>
+#include <base/print_format.h>
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -91,8 +89,8 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
 
     case ot_direct_with_segment:
       return snprintf(buffer, buffer_size, HEX_16 ":" HEX_16,
-                      operand->data.as_direct_with_segment.address.segment,
-                      operand->data.as_direct_with_segment.address.offset);
+                      operand->data.as_direct_with_segment.segment,
+                      operand->data.as_direct_with_segment.offset);
 
     case ot_immediate:
       return print_immediate(buffer, buffer_size, operand);

@@ -1,8 +1,9 @@
 #ifndef DECODE_FUNCS_H_
 #define DECODE_FUNCS_H_
 
-#include "../instruction.h"
-#include "../streams.h"
+#include "decoder/instruction.h"
+
+#include <base/streams.h>
 
 void decode_AL_DX_Xx(struct input_stream *stream, struct instruction *instruction);
 void decode_AL_Ib_Xx(struct input_stream *stream, struct instruction *instruction);

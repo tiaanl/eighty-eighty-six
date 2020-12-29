@@ -1,4 +1,4 @@
-#include "instruction.h"
+#include "decoder/instruction.h"
 
 void instruction_init(struct instruction *instruction) {
   memset(instruction, 0, sizeof(*instruction));

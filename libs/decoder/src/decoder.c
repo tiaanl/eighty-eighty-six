@@ -1,8 +1,7 @@
-#include "decoder.h"
+#include "decoder/decoder.h"
 
-#include "../address.h"
-#include "../mod_rm.h"
-#include "../print_format.h"
+#include <base/print_format.h>
+#include "decoder/mod_rm.h"
 #include "op_code_table.h"
 
 #include <assert.h>
