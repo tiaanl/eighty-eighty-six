@@ -1,4 +1,4 @@
-#include "decoder/mod_rm.h"
+#include "mod_rm.h"
 // #include "testing.h"
 
 #if defined(TESTING)

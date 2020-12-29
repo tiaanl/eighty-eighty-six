@@ -7,7 +7,7 @@
 
 #define MNEMONIC "%-6s"
 
-const char *indirect_encoding_to_string(enum mod_rm_mem encoding) {
+const char *indirect_memory_encoding_to_string(enum indirect_memory_encoding encoding) {
   static const char *mapping[8] = {
       "bx+si", "bx+di", "bp+si", "bp+di", "si", "di", "bp", "bx",
   };
@@ -54,14 +54,14 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
     case ot_indirect: {
       int inc = print_pointer_size(buffer, buffer_size, operand->size);
       return inc + snprintf(buffer, buffer_size, "[%s]",
-                            indirect_encoding_to_string(operand->data.as_indirect.encoding));
+                            indirect_memory_encoding_to_string(operand->data.as_indirect.encoding));
       break;
     }
 
     case ot_displacement: {
       int inc = print_pointer_size(buffer, buffer_size, operand->size);
       return inc + snprintf(buffer + inc, buffer_size - inc, "[%s+" HEX_16 "]",
-                            indirect_encoding_to_string(operand->data.as_indirect.encoding),
+                            indirect_memory_encoding_to_string(operand->data.as_indirect.encoding),
                             operand->data.as_displacement.displacement);
     }
 

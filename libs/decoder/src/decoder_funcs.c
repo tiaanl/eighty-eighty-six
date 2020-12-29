@@ -1,6 +1,8 @@
 
 #include "decoder_funcs.h"
 
+#include "mod_rm.h"
+
 #include <stdbool.h>
 
 static void operand_from_mod_rm_reg(struct operand *operand, enum operand_size size,

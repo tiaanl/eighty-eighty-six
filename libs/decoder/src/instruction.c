@@ -1,5 +1,7 @@
 #include "decoder/instruction.h"
 
+#include <assert.h>
+
 void instruction_init(struct instruction *instruction) {
   memset(instruction, 0, sizeof(*instruction));
 }

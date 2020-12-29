@@ -1,10 +1,10 @@
 #include "decoder/decoder.h"
 
-#include <base/print_format.h>
-#include "decoder/mod_rm.h"
+#include "mod_rm.h"
 #include "op_code_table.h"
 
 #include <assert.h>
+#include <base/print_format.h>
 #include <stdio.h>
 
 static void dump_buffer(const u8 *buffer, unsigned buffer_size) {
