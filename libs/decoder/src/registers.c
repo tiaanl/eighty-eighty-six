@@ -7,7 +7,7 @@ const char *register_8_to_string(enum register_8 reg) {
       "ah", "al", "ch", "cl", "dh", "dl", "bh", "bl",
   };
 
-  assert(reg < REGISTER_8_COUNT);
+  assert(reg < register_8_count);
   return mapping[reg];
 }
 
@@ -16,7 +16,7 @@ const char *register_16_to_string(enum register_16 reg) {
       "ax", "cx", "dx", "bx", "sp", "bp", "si", "di",
   };
 
-  assert(reg < REGISTER_16_COUNT);
+  assert(reg < register_16_count);
   return mapping[reg];
 }
 
@@ -28,6 +28,6 @@ const char *segment_register_to_string(enum segment_register reg) {
       "ds",
   };
 
-  assert(reg < SEGMENT_REGISTER_COUNT);
+  assert(reg < segment_register_count);
   return mapping[reg];
 }

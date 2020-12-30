@@ -11,7 +11,7 @@ enum register_8 {
   BH,
   BL,
 
-  REGISTER_8_COUNT,
+  register_8_count,
 };
 
 enum register_16 {
@@ -25,7 +25,7 @@ enum register_16 {
   SI,
   DI,
 
-  REGISTER_16_COUNT,
+  register_16_count,
 };
 
 enum segment_register {
@@ -34,7 +34,7 @@ enum segment_register {
   SS,
   DS,
 
-  SEGMENT_REGISTER_COUNT,
+  segment_register_count,
 };
 
 const char *register_8_to_string(enum register_8 reg);

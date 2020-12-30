@@ -1,7 +1,6 @@
 set(HEADER_FILES
     include/decoder/decoder.h
     include/decoder/instruction.h
-    include/decoder/mod_rm.h
     )
 
 set(SOURCE_FILES
