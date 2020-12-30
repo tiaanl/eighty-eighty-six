@@ -9,6 +9,11 @@
 void decode_instruction(struct input_stream *stream, struct instruction *instruction) {
   u32 start_position = stream->position;
 
+  // Instruction defaults.
+  memset(instruction, 0, sizeof(*instruction));
+  instruction->segment_register = DS;
+  instruction->rep_prefix = rp_none;
+
   u8 op_code = input_stream_fetch_u8(stream);
   struct op_code_mapping *mapping = &op_code_table[op_code];
 
