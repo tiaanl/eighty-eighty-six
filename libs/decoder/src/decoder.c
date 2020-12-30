@@ -3,8 +3,6 @@
 #include "op_code_table.h"
 
 #include <assert.h>
-#include <base/print_format.h>
-#include <stdio.h>
 
 void decode_instruction(struct input_stream *stream, struct instruction *instruction) {
   u32 start_position = stream->position;
@@ -29,12 +27,6 @@ void decode_instruction(struct input_stream *stream, struct instruction *instruc
   if (mapping->instruction_type == it_group) {
     u8 index = op_code >> 3 & 0x07;
     mapping = &mapping->group_table[index];
-  }
-
-  if (!mapping) {
-    fprintf(stderr, "Mapping not found for op_code " HEX_8 "\n", op_code);
-    assert(0);
-    return;
   }
 
   assert(mapping);

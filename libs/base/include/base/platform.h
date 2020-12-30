@@ -11,6 +11,11 @@ typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long long u64;
 
+typedef unsigned char byte;
+typedef unsigned short word;
+typedef unsigned int dword;
+typedef unsigned long long qword;
+
 #define UNUSED(x) (void)(x)
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

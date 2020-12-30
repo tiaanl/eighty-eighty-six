@@ -134,14 +134,12 @@ enum instruction_type {
   it_imul,
   it_in,
   it_inc,
-  it_insb,
-  it_insw,
+  it_ins,
   it_int,
   it_int1,
   it_int3,
   it_into,
   it_iret,
-  it_jae,
   it_jb,
   it_jbe,
   it_jcxz,
@@ -173,7 +171,6 @@ enum instruction_type {
   it_movs,
   it_mul,
   it_neg,
-  it_noop,
   it_not,
   it_or,
   it_out,
@@ -232,12 +229,6 @@ struct instruction {
   u8 buffer[16];
   u8 instruction_size;
 };
-
-// typedef void (*execute_func)(struct cpu *cpu, struct instruction *instruction);
-//
-// struct instruction_table_mapping {
-//  enum instruction_type instruction_type;
-//};
 
 void instruction_init(struct instruction *instruction);
 
