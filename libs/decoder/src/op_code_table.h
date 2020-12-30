@@ -97,10 +97,6 @@ enum addressing_method {
   am_Yw,
 };
 
-enum decode_flags {
-  DF_HAS_MOD_RM = 0x01,
-};
-
 typedef void (*decode_func)(struct input_stream *stream, struct instruction *instruction);
 
 struct op_code_mapping {
@@ -109,10 +105,7 @@ struct op_code_mapping {
   enum addressing_method tmp2;
   enum addressing_method tmp3;
   decode_func decode_func;
-  enum decode_type destination_type;
-  enum decode_type source_type;
-  enum decode_type third_type;
-  u8 flags;
+  struct op_code_mapping *group_table;
 };
 
 extern struct op_code_mapping op_code_table[];

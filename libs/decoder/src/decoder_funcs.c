@@ -448,6 +448,14 @@ void decode_AX_DX_Xx(struct input_stream *stream, struct instruction *instructio
   operand_none(&instruction->third);
 }
 
+void decode_AL_Eb_Xx(struct input_stream *stream, struct instruction *instruction) {
+  struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
+
+  operand_from_register_8(&instruction->destination, os_8, AL);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_none(&instruction->third);
+}
+
 void decode_AX_Ew_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
@@ -658,4 +666,40 @@ void decode_AX_Rw_Xx(struct input_stream *stream, struct instruction *instructio
   operand_from_register_16(&instruction->destination, os_16, AX);
   operand_from_mod_rm_reg(&instruction->source, os_16, op_code & 0x07);
   operand_none(&instruction->third);
+}
+
+void decode_rep_prefix(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->rep_prefix = rp_rep;
+}
+
+void decode_repne_prefix(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->rep_prefix = rp_repne;
+}
+
+void decode_seg_reg_override_cs(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->segment_register = CS;
+}
+
+void decode_seg_reg_override_es(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->segment_register = ES;
+}
+
+void decode_seg_reg_override_ds(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->segment_register = DS;
+}
+
+void decode_seg_reg_override_ss(struct input_stream *stream, struct instruction *instruction) {
+  UNUSED(stream);
+
+  instruction->segment_register = SS;
 }

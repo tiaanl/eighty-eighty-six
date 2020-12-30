@@ -15,6 +15,25 @@ const char *indirect_memory_encoding_to_string(enum indirect_memory_encoding enc
   return mapping[encoding];
 }
 
+int print_prefix(char *buffer, size_t buffer_size, const struct instruction *instruction) {
+  switch (instruction->rep_prefix) {
+    case rp_rep:
+      return snprintf(buffer, buffer_size, "rep ");
+
+    case rp_repne:
+      return snprintf(buffer, buffer_size, "repne ");
+
+    case rp_none:
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
+
+  return 0;
+}
+
 int print_mnemonic(char *buffer, size_t buffer_size, const struct instruction *instruction) {
   return snprintf(buffer, buffer_size, MNEMONIC, instruction_type_to_string(instruction->type));
 }
@@ -47,21 +66,53 @@ int print_pointer_size(char *buffer, size_t buffer_size, enum operand_size size)
   }
 }
 
+int print_indirect(char *buffer, size_t buffer_size, enum operand_size size,
+                   enum segment_register segment_register, enum indirect_memory_encoding ime,
+                   i16 displacement) {
+  int inc = 0;
+
+  inc += print_pointer_size(buffer, buffer_size, size);
+
+  inc += snprintf(buffer + inc, buffer_size - inc, "%s:[%s",
+                  segment_register_to_string(segment_register),
+                  indirect_memory_encoding_to_string(ime));
+
+  if (displacement == 0) {
+    return inc + snprintf(buffer + inc, buffer_size - inc, "]");
+  }
+
+  if (displacement < 0) {
+    inc += snprintf(buffer + inc, buffer_size - inc, "-");
+    displacement *= -1;
+  } else {
+    inc += snprintf(buffer + inc, buffer_size - inc, "+");
+  }
+
+  switch (size) {
+    case os_8:
+      return inc + snprintf(buffer + inc, buffer_size - inc, HEX_8 "]", displacement);
+
+    case os_16:
+      return inc + snprintf(buffer + inc, buffer_size - inc, HEX_16 "]", displacement);
+
+    default:
+      assert(0);
+      return 0;
+  }
+}
+
 int print_operand(char *buffer, size_t buffer_size, const struct operand *operand,
                   struct address address, u8 instruction_size,
                   enum segment_register segment_register) {
   switch (operand->type) {
     case ot_indirect: {
-      int inc = print_pointer_size(buffer, buffer_size, operand->size);
-      return inc + snprintf(buffer, buffer_size, "[%s]",
-                            indirect_memory_encoding_to_string(operand->data.as_indirect.encoding));
-      break;
+      return print_indirect(buffer, buffer_size, operand->size, segment_register,
+                            operand->data.as_indirect.encoding, 0);
     }
 
     case ot_displacement: {
-      int inc = print_pointer_size(buffer, buffer_size, operand->size);
-      return inc + snprintf(buffer + inc, buffer_size - inc, "[%s+" HEX_16 "]",
-                            indirect_memory_encoding_to_string(operand->data.as_indirect.encoding),
+      return print_indirect(buffer, buffer_size, operand->size, segment_register,
+                            operand->data.as_displacement.encoding,
                             operand->data.as_displacement.displacement);
     }
 
@@ -125,11 +176,15 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
       }
     }
 
-    case ot_ds_si:
-      return snprintf(buffer, buffer_size, "ds:si");
+    case ot_ds_si: {
+      int inc = print_pointer_size(buffer, buffer_size, operand->size);
+      return inc + snprintf(buffer + inc, buffer_size - inc, "ds:si");
+    }
 
-    case ot_es_di:
-      return snprintf(buffer, buffer_size, "es:di");
+    case ot_es_di: {
+      int inc = print_pointer_size(buffer, buffer_size, operand->size);
+      return inc + snprintf(buffer + inc, buffer_size - inc, "es:di");
+    }
 
     case ot_none:
       return 0;
@@ -146,7 +201,7 @@ int print_buffer(char *buffer, size_t buffer_size, const struct instruction *ins
   for (; i < instruction->instruction_size; ++i) {
     inc += snprintf(buffer + inc, buffer_size - inc, "%02x ", instruction->buffer[i]);
   }
-  for (; i < 16; ++i) {
+  for (; i < 8; ++i) {
     inc += snprintf(buffer + inc, buffer_size - inc, "   ");
   }
 
@@ -154,8 +209,8 @@ int print_buffer(char *buffer, size_t buffer_size, const struct instruction *ins
 }
 
 static enum instruction_type no_operand_mnemonics[] = {
-    it_lodsb,
-    it_lodsw,
+    //    it_lodsb,
+    //    it_lodsw,
     it_popf,
     it_pushf,
 };
@@ -177,7 +232,9 @@ int disassemble(char *buffer, size_t buffer_size, const struct instruction *inst
   inc += snprintf(buffer + inc, buffer_size - inc, HEX_16 ":" HEX_16 "  ", address.segment,
                   address.offset);
 
-  inc = print_buffer(buffer + inc, buffer_size - inc, instruction);
+  inc += print_buffer(buffer + inc, buffer_size - inc, instruction);
+
+  inc += print_prefix(buffer + inc, buffer_size - inc, instruction);
 
   inc += print_mnemonic(buffer + inc, buffer_size - inc, instruction);
 

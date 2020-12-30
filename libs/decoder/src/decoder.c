@@ -1,84 +1,44 @@
 #include "decoder/decoder.h"
 
-#include "mod_rm.h"
 #include "op_code_table.h"
 
 #include <assert.h>
 #include <base/print_format.h>
 #include <stdio.h>
 
-static void dump_buffer(const u8 *buffer, unsigned buffer_size) {
-  for (unsigned i = 0; i < buffer_size; ++i) {
-    printf(HEX_8 " ", buffer[i]);
-  }
-  printf("\n");
-}
-
-static struct op_code_mapping *instruction_group_mapping(u8 op_code, struct input_stream *stream) {
-  switch (op_code) {
-    case 0xf7: {
-      u8 mod_rm_byte = input_stream_peek_u8(stream, 0);
-      struct mod_rm mrm = decode_mod_rm(mod_rm_byte);
-      return &op_code_table_group_f7[mrm.reg];
-    }
-
-    default:
-      assert(0);
-      break;
-  }
-
-  return 0;
-}
-
 void decode_instruction(struct input_stream *stream, struct instruction *instruction) {
   u32 start_position = stream->position;
 
   u8 op_code = input_stream_fetch_u8(stream);
-
-  instruction->segment_register = DS;
-  if (op_code == 0x2e || op_code == 0x26 || op_code == 0x3e || op_code == 0x36) {
-    switch (op_code) {
-      case 0x2e:
-        instruction->segment_register = CS;
-        break;
-
-      case 0x26:
-        instruction->segment_register = ES;
-        break;
-
-      case 0x3e:
-        instruction->segment_register = DS;
-        break;
-
-      case 0x36:
-        instruction->segment_register = SS;
-        break;
-
-      default:
-        assert(0);
-        break;
-    }
-
-    op_code = input_stream_fetch_u8(stream);
-  }
-
-  // FIXME: We skip the rep & repne prefixes for now
-  if (op_code == 0xf2 || op_code == 0xf3) {
-    op_code = input_stream_fetch_u8(stream);
-  }
-
   struct op_code_mapping *mapping = &op_code_table[op_code];
+
+  // If the mapping is a prefix, then we run the decoder function for it and fetch the next byte
+  // as the op_code and get a new mapping.
+  if (mapping->instruction_type == it_prefix && mapping->decode_func) {
+    mapping->decode_func(stream, instruction);
+    op_code = input_stream_fetch_u8(stream);
+    mapping = &op_code_table[op_code];
+  }
+
+  // If the mapping is a group, then we replace the mapping with one in the group table.
   if (mapping->instruction_type == it_group) {
-    mapping = instruction_group_mapping(op_code, stream);
+    u8 index = op_code >> 3 & 0x07;
+    mapping = &mapping->group_table[index];
+  }
+
+  if (!mapping) {
+    fprintf(stderr, "Mapping not found for op_code " HEX_8 "\n", op_code);
+    assert(0);
+    return;
   }
 
   assert(mapping);
 
   instruction->type = mapping->instruction_type;
 
-  assert(mapping->decode_func);
-
-  mapping->decode_func(stream, instruction);
+  if (mapping->decode_func) {
+    mapping->decode_func(stream, instruction);
+  }
 
   u8 instruction_size = stream->position - start_position;
   stream->position = start_position;
