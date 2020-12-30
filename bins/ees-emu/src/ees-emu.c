@@ -20,16 +20,17 @@ int main() {
   struct cpu cpu;
   cpu_init(&cpu, &bus, reset_vector);
 
-  // Write into memory a jump to address 0000:0000.
+  // Write into memory a jump to address 0000:0100.
   u32 flat = flatten_address(reset_vector);
   memory[flat] = 0xea;
+  memory[flat + 2] = 0x01;
 
-  // Load the test program into memory at 0000:0000.
+  // Load the test program into memory at 0000:0100.
   FILE *handle = fopen("/home/tilo/Code/life-16/life.com", "rb");
   fseek(handle, 0, SEEK_END);
   long file_size = ftell(handle);
   fseek(handle, 0, SEEK_SET);
-  fread(memory, file_size, 1, handle);
+  fread(memory + 0x0100, file_size, 1, handle);
   fclose(handle);
 
   while (1) {
