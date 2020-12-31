@@ -2,10 +2,11 @@
 #define CPU_CPU_H_
 
 #include "cpu/bus.h"
+#include "cpu/flags.h"
+#include "cpu/ports.h"
 
 #include <base/address.h>
 #include <base/platform.h>
-#include <cpu/flags.h>
 #include <decoder/registers.h>
 
 union regs {
@@ -14,6 +15,7 @@ union regs {
 };
 
 struct cpu {
+  struct ports *ports;
   struct bus *bus;
 
   union regs regs;
@@ -22,7 +24,7 @@ struct cpu {
   union flags flags;
 };
 
-void cpu_init(struct cpu *cpu, struct bus *bus, struct address reset_vector);
+void cpu_init(struct cpu *cpu, struct ports *ports, struct bus *bus, struct address reset_vector);
 void cpu_step(struct cpu *cpu);
 
 #endif // CPU_CPU_H_

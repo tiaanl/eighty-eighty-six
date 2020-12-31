@@ -102,18 +102,17 @@ int print_indirect(char *buffer, size_t buffer_size, enum operand_size size,
 }
 
 int print_operand(char *buffer, size_t buffer_size, const struct operand *operand,
-                  struct address address, u8 instruction_size,
-                  enum segment_register segment_register) {
+                  struct address address, u8 instruction_size) {
   switch (operand->type) {
     case ot_indirect: {
-      return print_indirect(buffer, buffer_size, operand->size, segment_register,
+      return print_indirect(buffer, buffer_size, operand->size, operand->data.as_indirect.seg_reg,
                             operand->data.as_indirect.encoding, 0);
     }
 
     case ot_displacement: {
-      return print_indirect(buffer, buffer_size, operand->size, segment_register,
-                            operand->data.as_displacement.encoding,
-                            operand->data.as_displacement.displacement);
+      return print_indirect(
+          buffer, buffer_size, operand->size, operand->data.as_displacement.seg_reg,
+          operand->data.as_displacement.encoding, operand->data.as_displacement.displacement);
     }
 
     case ot_register:
@@ -134,7 +133,7 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
     case ot_direct: {
       int inc = print_pointer_size(buffer, buffer_size, operand->size);
       return inc + snprintf(buffer + inc, buffer_size - inc, "%s:" HEX_16,
-                            segment_register_to_string(segment_register),
+                            segment_register_to_string(operand->data.as_direct.seg_reg),
                             operand->data.as_direct.address);
     }
 
@@ -160,7 +159,8 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
                       operand->data.as_far_jump.offset);
 
     case ot_offset: {
-      int inc = snprintf(buffer, buffer_size, "%s:", segment_register_to_string(segment_register));
+      int inc = snprintf(buffer, buffer_size,
+                         "%s:", segment_register_to_string(operand->data.as_offset.seg_reg));
       switch (operand->size) {
         case os_8:
           return inc +
@@ -242,14 +242,14 @@ int disassemble(char *buffer, size_t buffer_size, const struct instruction *inst
 
   if (mpo) {
     inc += print_operand(buffer + inc, buffer_size - inc, &instruction->destination, address,
-                         instruction->instruction_size, instruction->segment_register);
+                         instruction->instruction_size);
 
     if (instruction->source.type != ot_none) {
       inc += snprintf(buffer + inc, buffer_size - inc, ", ");
     }
 
     inc += print_operand(buffer + inc, buffer_size - inc, &instruction->source, address,
-                         instruction->instruction_size, instruction->segment_register);
+                         instruction->instruction_size);
   }
 
   return inc;

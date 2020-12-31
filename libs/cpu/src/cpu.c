@@ -20,9 +20,10 @@ static void cpu_exec(struct cpu *cpu, struct instruction *instruction) {
   mapping->exec_func(cpu, instruction);
 }
 
-void cpu_init(struct cpu *cpu, struct bus *bus, struct address reset_vector) {
+void cpu_init(struct cpu *cpu, struct ports *ports, struct bus *bus, struct address reset_vector) {
   memset(cpu, 0, sizeof(*cpu));
 
+  cpu->ports = ports;
   cpu->bus = bus;
 
   cpu->segment_16[CS] = reset_vector.segment;

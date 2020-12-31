@@ -3,10 +3,27 @@
 #include <base/print_format.h>
 #include <stdio.h>
 
+static const byte parity_flag_table[0x100] = {
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+};
+
 byte fetch_operand_value_byte(struct cpu *cpu, struct operand *operand) {
   assert(operand->size == os_8);
 
   switch (operand->type) {
+    case ot_register:
+      return cpu->regs.byte[operand->data.as_register.reg_8];
+
+    case ot_immediate:
+      return operand->data.as_immediate.immediate_8;
+
     default:
       assert(0);
       break;
@@ -31,6 +48,17 @@ word fetch_operand_value_word(struct cpu *cpu, struct operand *operand) {
   assert(operand->size == os_16);
 
   switch (operand->type) {
+    case ot_direct: {
+      u32 address = flatten_address(segment_offset(cpu->segment_16[operand->data.as_direct.seg_reg],
+                                                   operand->data.as_direct.address));
+      byte low = bus_fetch_byte(cpu->bus, address);
+      byte high = bus_fetch_byte(cpu->bus, address + 1);
+      return low + (high << 8);
+    }
+
+    case ot_register:
+      return cpu->regs.word[operand->data.as_register.reg_16];
+
     case ot_immediate:
       return operand->data.as_immediate.immediate_16;
 
@@ -44,8 +72,61 @@ void store_operand_value_word(struct cpu *cpu, struct operand *operand, word val
   assert(operand->size == os_16);
 
   switch (operand->type) {
+    case ot_indirect: {
+      u16 segment = cpu->segment_16[operand->data.as_indirect.seg_reg];
+      u16 offset = 0;
+
+      switch (operand->data.as_indirect.encoding) {
+        case ime_bx_si:
+          offset = cpu->regs.word[BX] + cpu->regs.word[SI];
+          break;
+
+        case ime_bx_di:
+          offset = cpu->regs.word[BX] + cpu->regs.word[DI];
+          break;
+
+        case ime_bp_si:
+          offset = cpu->regs.word[BP] + cpu->regs.word[SI];
+          break;
+
+        case ime_bp_di:
+          offset = cpu->regs.word[BP] + cpu->regs.word[DI];
+          break;
+
+        case ime_si:
+          offset = cpu->regs.word[SI];
+          break;
+
+        case ime_di:
+          offset = cpu->regs.word[DI];
+          break;
+
+        case ime_bp:
+          offset = cpu->regs.word[BP];
+          break;
+
+        case ime_bx:
+          offset = cpu->regs.word[BX];
+          break;
+
+        default:
+          assert(0);
+          break;
+      }
+
+      u32 address = flatten_address(segment_offset(segment, offset));
+
+      bus_store_byte(cpu->bus, address, value & 0xff);
+      bus_store_byte(cpu->bus, address + 1, value >> 8);
+      break;
+    }
+
     case ot_register:
       cpu->regs.word[operand->data.as_register.reg_16] = value;
+      break;
+
+    case ot_segment_register:
+      cpu->segment_16[operand->data.as_segment_register.reg] = value;
       break;
 
     default:
@@ -54,15 +135,178 @@ void store_operand_value_word(struct cpu *cpu, struct operand *operand, word val
   }
 }
 
+void flags_sign_zero_parity_byte(union flags *flags, byte value) {
+  flags->zero = (!value) ? 1 : 0;
+  flags->sign = (value & 0x80) ? 1 : 0;
+  flags->parity = parity_flag_table[value];
+}
+
+void flags_sign_zero_parity_word(union flags *flags, word value) {
+  flags->zero = (!value) ? 1 : 0;
+  flags->sign = (value & 0x8000) ? 1 : 0;
+  flags->parity = parity_flag_table[value & 0xff];
+}
+
+void flags_sub_byte(union flags *flags, byte left, byte right) {
+  word result = (word)left - (word)right;
+
+  flags_sign_zero_parity_byte(flags, result);
+
+  flags->carry = (result & 0xff00) ? 1 : 0;
+  flags->overflow = ((result ^ left) & (left ^ right) & 0x80) ? 1 : 0;
+  flags->adjust = ((left ^ right ^ result) & 0x10) ? 1 : 0;
+}
+
+void flags_sub_word(union flags *flags, word left, word right) {
+  dword result = (dword)left - (dword)right;
+
+  flags_sign_zero_parity_word(flags, result);
+
+  flags->carry = (result & 0xffff0000) ? 1 : 0;
+  flags->overflow = ((result ^ left) & (left ^ right) & 0x8000) ? 1 : 0;
+  flags->adjust = ((left ^ right ^ result) & 0x10) ? 1 : 0;
+}
+
+#define flags_add_byte flags_sub_byte
+#define flags_add_word flags_sub_word
+
+#define FLAGS_LOG(SIZE)                                                                            \
+  void flags_log_##SIZE(union flags *flags, SIZE value) {                                          \
+    flags_sign_zero_parity_##SIZE(flags, value);                                                   \
+                                                                                                   \
+    flags->carry = 0;                                                                              \
+    flags->overflow = 0;                                                                           \
+  }
+
+FLAGS_LOG(byte)
+FLAGS_LOG(word)
+
+#undef FLAGS_LOG
+
 /* ---------------------------------------------------------------------------------------------- */
+
+void exec_cld(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_cld);
+
+  cpu->flags.direction = 0;
+}
+
+void exec_cli(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_cli);
+
+  cpu->flags.interrupt = 0;
+}
+
+void exec_cmp(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_cmp);
+  assert(instruction->destination.size == instruction->source.size);
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      byte left = fetch_operand_value_byte(cpu, &instruction->destination);
+      byte right = fetch_operand_value_byte(cpu, &instruction->source);
+      flags_sub_byte(&cpu->flags, left, right);
+      break;
+    }
+
+    case os_16:
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void exec_dec(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_dec);
+
+#define OP(SIZE)                                                                                   \
+  do {                                                                                             \
+    SIZE left = fetch_operand_value_##SIZE(cpu, &instruction->destination);                        \
+    SIZE right = 1;                                                                                \
+                                                                                                   \
+    SIZE result = left - right;                                                                    \
+                                                                                                   \
+    byte carry_temp = cpu->flags.carry;                                                            \
+    flags_sub_##SIZE(&cpu->flags, left, right);                                                    \
+    cpu->flags.carry = carry_temp;                                                                 \
+                                                                                                   \
+    store_operand_value_##SIZE(cpu, &instruction->destination, result);                            \
+  } while (0)
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      OP(byte);
+      break;
+    }
+
+    case os_16: {
+      OP(word);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+#undef OP
+}
+
+void exec_inc(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_inc);
+
+#define OP(SIZE)                                                                                   \
+  do {                                                                                             \
+    SIZE left = fetch_operand_value_##SIZE(cpu, &instruction->destination);                        \
+    SIZE right = 1;                                                                                \
+                                                                                                   \
+    SIZE result = left + right;                                                                    \
+                                                                                                   \
+    byte carry_temp = cpu->flags.carry;                                                            \
+    flags_add_##SIZE(&cpu->flags, left, right);                                                    \
+    cpu->flags.carry = carry_temp;                                                                 \
+                                                                                                   \
+    store_operand_value_##SIZE(cpu, &instruction->destination, result);                            \
+  } while (0)
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      OP(byte);
+      break;
+    }
+
+    case os_16: {
+      OP(word);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+#undef OP
+}
 
 void exec_int(struct cpu *cpu, struct instruction *instruction) {
   UNUSED(cpu);
+  assert(instruction->type == it_int);
 
   printf("## int " HEX_8 "\n\n", instruction->destination.data.as_immediate.immediate_8);
 }
 
+void exec_jb(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_jb);
+  assert(instruction->destination.size == os_8);
+
+  cpu->ip += instruction->destination.data.as_jump.offset;
+}
+
 void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_jmp);
+
   switch (instruction->destination.type) {
     case ot_far_jump:
       cpu->segment_16[CS] = instruction->destination.data.as_far_jump.segment;
@@ -80,6 +324,8 @@ void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
 }
 
 void exec_mov(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_mov);
+
   switch (instruction->destination.size) {
     case os_8: {
       byte source = fetch_operand_value_byte(cpu, &instruction->source);
@@ -99,6 +345,78 @@ void exec_mov(struct cpu *cpu, struct instruction *instruction) {
   }
 }
 
+void exec_out(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_out);
+
+  word address = 0;
+  if (instruction->destination.type == ot_register && instruction->destination.size == os_16 &&
+      instruction->destination.data.as_register.reg_16 == DX) {
+    address = cpu->regs.word[DX];
+  } else if (instruction->destination.type == ot_immediate &&
+             instruction->destination.size == os_8) {
+    address = instruction->destination.data.as_immediate.immediate_8;
+  } else {
+    assert(0);
+    return;
+  }
+
+  assert(instruction->source.type == ot_register);
+
+  switch (instruction->source.size) {
+    case os_8:
+      ports_out(cpu->ports, address, fetch_operand_value_byte(cpu, &instruction->source));
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void exec_std(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_std);
+
+  cpu->flags.direction = 1;
+}
+
+void exec_sti(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_sti);
+
+  cpu->flags.interrupt = 1;
+}
+
+void exec_xor(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_xor);
+  assert(instruction->destination.size == instruction->source.size);
+
+#define OP(SIZE)                                                                                   \
+  do {                                                                                             \
+    SIZE left = fetch_operand_value_##SIZE(cpu, &instruction->destination);                        \
+    SIZE right = fetch_operand_value_##SIZE(cpu, &instruction->source);                            \
+    SIZE result = left ^ right;                                                                    \
+    flags_log_word(&cpu->flags, result);                                                           \
+    store_operand_value_##SIZE(cpu, &instruction->destination, result);                            \
+  } while (0)
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      OP(byte);
+      break;
+    }
+
+    case os_16: {
+      OP(word);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+#undef OP
+}
+
 struct instr_mapping instr_map[] = {
     {it_aaa, 0},        //
     {it_aad, 0},        //
@@ -113,15 +431,15 @@ struct instr_mapping instr_map[] = {
     {it_callf, 0},      //
     {it_cbw, 0},        //
     {it_clc, 0},        //
-    {it_cld, 0},        //
-    {it_cli, 0},        //
+    {it_cld, exec_cld}, //
+    {it_cli, exec_cli}, //
     {it_cmc, 0},        //
-    {it_cmp, 0},        //
+    {it_cmp, exec_cmp}, //
     {it_cmps, 0},       //
     {it_cwd, 0},        //
     {it_daa, 0},        //
     {it_das, 0},        //
-    {it_dec, 0},        //
+    {it_dec, exec_dec}, //
     {it_div, 0},        //
     {it_enter, 0},      //
     {it_fwait, 0},      //
@@ -129,14 +447,14 @@ struct instr_mapping instr_map[] = {
     {it_idiv, 0},       //
     {it_imul, 0},       //
     {it_in, 0},         //
-    {it_inc, 0},        //
+    {it_inc, exec_inc}, //
     {it_ins, 0},        //
     {it_int, exec_int}, //
     {it_int1, 0},       //
     {it_int3, 0},       //
     {it_into, 0},       //
     {it_iret, 0},       //
-    {it_jb, 0},         //
+    {it_jb, exec_jb},   //
     {it_jbe, 0},        //
     {it_jcxz, 0},       //
     {it_jl, 0},         //
@@ -169,7 +487,7 @@ struct instr_mapping instr_map[] = {
     {it_neg, 0},        //
     {it_not, 0},        //
     {it_or, 0},         //
-    {it_out, 0},        //
+    {it_out, exec_out}, //
     {it_outs, 0},       //
     {it_pop, 0},        //
     {it_popa, 0},       //
@@ -191,12 +509,12 @@ struct instr_mapping instr_map[] = {
     {it_shl, 0},        //
     {it_shr, 0},        //
     {it_stc, 0},        //
-    {it_std, 0},        //
-    {it_sti, 0},        //
+    {it_std, exec_std}, //
+    {it_sti, exec_sti}, //
     {it_stos, 0},       //
     {it_sub, 0},        //
     {it_test, 0},       //
     {it_xchg, 0},       //
     {it_xlat, 0},       //
-    {it_xor, 0},        //
+    {it_xor, exec_xor}, //
 };

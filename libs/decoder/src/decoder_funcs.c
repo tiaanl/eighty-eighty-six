@@ -39,7 +39,8 @@ static void operand_from_mod_rm_reg(struct operand *operand, enum operand_size s
 
 static void operand_from_mod_rm_reg_mem(struct operand *operand, enum operand_size size,
                                         struct input_stream *stream, enum mod_rm_mod mod,
-                                        union mod_rm_reg_mem reg_mem, bool mem_only) {
+                                        union mod_rm_reg_mem reg_mem, enum segment_register seg_reg,
+                                        bool mem_only) {
   if (mem_only && mod == mod_rm_mod_register) {
     assert(0);
     return;
@@ -50,25 +51,29 @@ static void operand_from_mod_rm_reg_mem(struct operand *operand, enum operand_si
       if (reg_mem.as_mem == mod_rm_mem_bp) {
         operand->type = ot_direct;
         operand->size = size;
+        operand->data.as_direct.seg_reg = seg_reg;
         operand->data.as_direct.address = input_stream_fetch_u16(stream);
       } else {
         operand->type = ot_indirect;
         operand->size = size;
-        operand->data.as_indirect.encoding = reg_mem.as_mem;
+        operand->data.as_indirect.seg_reg = seg_reg;
+        operand->data.as_indirect.encoding = (enum indirect_memory_encoding)reg_mem.as_mem;
       }
       break;
 
     case mod_rm_mod_byte:
       operand->type = ot_displacement;
       operand->size = size;
-      operand->data.as_displacement.encoding = reg_mem.as_mem;
+      operand->data.as_displacement.seg_reg = seg_reg;
+      operand->data.as_displacement.encoding = (enum indirect_memory_encoding)reg_mem.as_mem;
       operand->data.as_displacement.displacement = (i16)input_stream_fetch_i8(stream);
       break;
 
     case mod_rm_mod_word:
       operand->type = ot_displacement;
       operand->size = size;
-      operand->data.as_displacement.encoding = reg_mem.as_mem;
+      operand->data.as_displacement.seg_reg = seg_reg;
+      operand->data.as_displacement.encoding = (enum indirect_memory_encoding)reg_mem.as_mem;
       operand->data.as_displacement.displacement = input_stream_fetch_i16(stream);
       break;
 
@@ -164,9 +169,11 @@ void operand_from_flags_register(struct operand *operand) {
 }
 
 void operand_from_offset(struct operand *operand, enum operand_size size,
-                         struct input_stream *stream) {
+                         struct input_stream *stream, enum segment_register seg_reg) {
   operand->type = ot_offset;
   operand->size = size;
+
+  operand->data.as_offset.seg_reg = seg_reg;
 
   switch (size) {
     case os_8:
@@ -224,7 +231,8 @@ void decode_Xx_Xx_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Eb_Gb_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_from_mod_rm_reg(&instruction->source, os_8, mrm.reg);
   operand_none(&instruction->third);
 }
@@ -233,7 +241,7 @@ void decode_Ew_Gw_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_from_mod_rm_reg(&instruction->source, os_16, mrm.reg);
   operand_none(&instruction->third);
 }
@@ -242,7 +250,8 @@ void decode_Gb_Eb_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_8, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 
@@ -250,7 +259,8 @@ void decode_Gw_Ew_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 
@@ -320,7 +330,8 @@ void decode_Gw_Ma_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, true);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, true);
   operand_none(&instruction->third);
 }
 
@@ -328,7 +339,8 @@ void decode_Gw_Ew_Ib(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_from_immediate(&instruction->third, os_8, stream);
 }
 
@@ -336,7 +348,8 @@ void decode_Gw_Ew_Iw(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_from_immediate(&instruction->third, os_16, stream);
 }
 
@@ -375,7 +388,8 @@ void decode_DX_Xw_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Eb_Ib_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_from_immediate(&instruction->source, os_8, stream);
   operand_none(&instruction->third);
 }
@@ -384,7 +398,7 @@ void decode_Ew_Iw_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_from_immediate(&instruction->source, os_16, stream);
   operand_none(&instruction->third);
 }
@@ -393,7 +407,7 @@ void decode_Ew_Ib_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_from_immediate(&instruction->source, os_8, stream);
   operand_none(&instruction->third);
 }
@@ -402,7 +416,7 @@ void decode_Ew_Sw_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_from_mod_rm_seg_reg(&instruction->source, os_16, mrm.reg);
   operand_none(&instruction->third);
 }
@@ -411,7 +425,8 @@ void decode_Gw_M_Xx(struct input_stream *stream, struct instruction *instruction
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, true);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, true);
   operand_none(&instruction->third);
 }
 
@@ -419,14 +434,16 @@ void decode_Sw_Ew_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_seg_reg(&instruction->destination, os_16, mrm.reg);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 
 void decode_Eb_Xx_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->source);
   operand_none(&instruction->third);
 }
@@ -435,7 +452,7 @@ void decode_Ew_Xx_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_none(&instruction->source);
   operand_none(&instruction->third);
 }
@@ -452,7 +469,8 @@ void decode_AL_Eb_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_register_8(&instruction->destination, os_8, AL);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 
@@ -460,7 +478,8 @@ void decode_AX_Ew_Xx(struct input_stream *stream, struct instruction *instructio
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_register_16(&instruction->destination, os_16, AX);
-  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->source, os_16, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 
@@ -480,24 +499,24 @@ void decode_Fw_Xx_Xx(struct input_stream *stream, struct instruction *instructio
 
 void decode_AL_Ob_Xx(struct input_stream *stream, struct instruction *instruction) {
   operand_from_register_8(&instruction->destination, os_8, AL);
-  operand_from_offset(&instruction->source, os_8, stream);
+  operand_from_offset(&instruction->source, os_8, stream, instruction->segment_register);
   operand_none(&instruction->third);
 }
 
 void decode_AX_Ow_Xx(struct input_stream *stream, struct instruction *instruction) {
   operand_from_register_16(&instruction->destination, os_16, AX);
-  operand_from_offset(&instruction->source, os_16, stream);
+  operand_from_offset(&instruction->source, os_16, stream, instruction->segment_register);
   operand_none(&instruction->third);
 }
 
 void decode_Ob_AL_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_offset(&instruction->destination, os_8, stream);
+  operand_from_offset(&instruction->destination, os_8, stream, instruction->segment_register);
   operand_from_register_8(&instruction->source, os_8, AL);
   operand_none(&instruction->third);
 }
 
 void decode_Ow_AX_Xx(struct input_stream *stream, struct instruction *instruction) {
-  operand_from_offset(&instruction->destination, os_16, stream);
+  operand_from_offset(&instruction->destination, os_16, stream, instruction->segment_register);
   operand_from_register_16(&instruction->source, os_16, AX);
   operand_none(&instruction->third);
 }
@@ -575,7 +594,8 @@ void decode_Iw_Ib_Xx(struct input_stream *stream, struct instruction *instructio
 void decode_Eb_1_Xx(struct input_stream *stream, struct instruction *instruction) {
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
-  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem, false);
+  operand_from_mod_rm_reg_mem(&instruction->destination, os_8, stream, mrm.mod, mrm.reg_mem,
+                              instruction->segment_register, false);
   operand_from_constant(&instruction->source, os_8, 1);
   operand_none(&instruction->third);
 }
@@ -584,7 +604,7 @@ void decode_Ew_1_Xx(struct input_stream *stream, struct instruction *instruction
   struct mod_rm mrm = decode_mod_rm(input_stream_fetch_u8(stream));
 
   operand_from_mod_rm_reg_mem(&instruction->destination, os_16, stream, mrm.mod, mrm.reg_mem,
-                              false);
+                              instruction->segment_register, false);
   operand_none(&instruction->third);
 }
 

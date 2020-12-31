@@ -2,6 +2,7 @@
 #define REGISTERS_H_
 
 enum register_8 {
+#if 0 // big-endian
   AH,
   AL,
   CH,
@@ -10,6 +11,16 @@ enum register_8 {
   DL,
   BH,
   BL,
+#else
+  AL,
+  AH,
+  CL,
+  CH,
+  DL,
+  DH,
+  BL,
+  BH,
+#endif
 
   register_8_count,
 };

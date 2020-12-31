@@ -40,15 +40,18 @@ enum indirect_memory_encoding {
 };
 
 struct operand_displacement {
+  enum segment_register seg_reg;
   enum indirect_memory_encoding encoding;
   i16 displacement;
 };
 
 struct operand_indirect {
+  enum segment_register seg_reg;
   enum indirect_memory_encoding encoding;
 };
 
 struct operand_direct {
+  enum segment_register seg_reg;
   u16 address;
 };
 
@@ -77,6 +80,7 @@ struct operand_far_jump {
 };
 
 struct operand_offset {
+  enum segment_register seg_reg;
   i16 offset;
 };
 

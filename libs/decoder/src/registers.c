@@ -4,7 +4,11 @@
 
 const char *register_8_to_string(enum register_8 reg) {
   static const char *mapping[] = {
+#if 0  // big-endian
       "ah", "al", "ch", "cl", "dh", "dl", "bh", "bl",
+#else
+      "al", "ah", "cl", "ch", "dl", "dh", "bl", "bh",
+#endif
   };
 
   assert(reg < register_8_count);

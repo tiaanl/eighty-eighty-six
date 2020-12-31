@@ -1,6 +1,7 @@
 #include <base/address.h>
 #include <cpu/bus.h>
 #include <cpu/cpu.h>
+#include <cpu/ports.h>
 #include <malloc.h>
 
 // 1Mb of memory
@@ -17,20 +18,21 @@ int main() {
   struct bus bus;
   bus_init(&bus, memory, DEFAULT_MEMORY_SIZE);
 
+  struct ports *ports = malloc(sizeof(struct ports));
+  ports_init(ports);
+
   struct cpu cpu;
-  cpu_init(&cpu, &bus, reset_vector);
+  cpu_init(&cpu, ports, &bus, reset_vector);
 
-  // Write into memory a jump to address 0000:0100.
-  u32 flat = flatten_address(reset_vector);
-  memory[flat] = 0xea;
-  memory[flat + 2] = 0x01;
+  // const char *bios_file = "/home/tilo/Code/life-16/life.com";
+  const char *bios_file = "/home/tilo/Code/Faux86/data/pcxtbios.bin";
 
-  // Load the test program into memory at 0000:0100.
-  FILE *handle = fopen("/home/tilo/Code/life-16/life.com", "rb");
+  // Load the BIOS at the very end of memory.
+  FILE *handle = fopen(bios_file, "rb");
   fseek(handle, 0, SEEK_END);
   long file_size = ftell(handle);
   fseek(handle, 0, SEEK_SET);
-  fread(memory + 0x0100, file_size, 1, handle);
+  fread(memory + DEFAULT_MEMORY_SIZE - file_size, file_size, 1, handle);
   fclose(handle);
 
   while (1) {
@@ -38,6 +40,7 @@ int main() {
   }
 
   free(memory);
+  free(ports);
 
   return 0;
 }
