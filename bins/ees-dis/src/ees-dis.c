@@ -2,8 +2,10 @@
 #include <base/streams.h>
 #include <decoder/decoder.h>
 #include <disassembler/disassembler.h>
+#include <getopt.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct binary_data {
   u8 *data;
@@ -60,19 +62,49 @@ static void parse_exe_mz(const u8 *data, size_t data_size) {
   u32 code_start = header_size;
 }
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    fprintf(stderr, "USAGE: %s <binary file>", argv[0]);
+void print_usage(const char *app_name) {
+  fprintf(stderr, "USAGE: %s <binary file>", app_name);
+}
+
+struct options {
+  char *filename;
+  u32 offset;
+};
+
+int parse_options(struct options *options, int argc, char **argv) {
+  int opt;
+  while ((opt = getopt(argc, argv, "o:")) != -1) {
+    if (opt == 'o') {
+      char *end;
+      options->offset = strtol(optarg, &end, 10);
+      if (end == optarg) {
+        print_usage(argv[0]);
+        return 1;
+      }
+    }
+  }
+
+  if (optind >= argc) {
+    print_usage(argv[0]);
     return 1;
   }
 
-  const char *filename = argv[1];
+  options->filename = argv[optind];
 
-  struct binary_data data = read_file(filename);
+  return 0;
+}
+
+int main(int argc, char *argv[]) {
+  struct options options;
+  int result = parse_options(&options, argc, argv);
+  if (result != 0) {
+    return result;
+  }
+
+  struct binary_data data = read_file(options.filename);
 
   struct input_stream in_stream;
   input_stream_init(&in_stream, &data, binary_data_fetch);
-  // input_stream_set_position(&reader, data.data_size - 0x10);
 
   if (*(u16 *)data.data == 0x5a4d) {
     struct executable_header_mz *header = (struct executable_header_mz *)data.data;
@@ -84,6 +116,8 @@ int main(int argc, char *argv[]) {
     in_stream.position = code_start;
   }
 
+  in_stream.position += options.offset;
+
   static char buffer[128];
   static size_t buffer_size = sizeof(buffer);
 
@@ -92,7 +126,7 @@ int main(int argc, char *argv[]) {
     instruction_init(&instruction);
     unsigned pos = in_stream.position;
     decode_instruction(&in_stream, &instruction);
-    disassemble(buffer, buffer_size, &instruction, segment_offset(0, pos));
+    disassemble(buffer, buffer_size, &instruction, pos);
     printf("%s\n", buffer);
   }
 

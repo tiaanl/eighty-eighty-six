@@ -101,8 +101,8 @@ int print_indirect(char *buffer, size_t buffer_size, enum operand_size size,
   }
 }
 
-int print_operand(char *buffer, size_t buffer_size, const struct operand *operand,
-                  struct address address, u8 instruction_size) {
+int print_operand(char *buffer, size_t buffer_size, const struct operand *operand, u32 offset,
+                  u8 instruction_size) {
   switch (operand->type) {
     case ot_indirect: {
       return print_indirect(buffer, buffer_size, operand->size, operand->data.as_indirect.seg_reg,
@@ -150,7 +150,7 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
                       segment_register_to_string(operand->data.as_segment_register.reg));
 
     case ot_jump: {
-      u16 new_addr = flatten_address(address) + instruction_size + operand->data.as_jump.offset;
+      u16 new_addr = offset + instruction_size + operand->data.as_jump.offset;
       return snprintf(buffer, buffer_size, HEX_16, new_addr);
     }
 
@@ -226,11 +226,10 @@ static bool must_print_operands(enum instruction_type it) {
 }
 
 int disassemble(char *buffer, size_t buffer_size, const struct instruction *instruction,
-                struct address address) {
+                u32 offset) {
   int inc = 0;
 
-  inc += snprintf(buffer + inc, buffer_size - inc, HEX_16 ":" HEX_16 "  ", address.segment,
-                  address.offset);
+  inc += snprintf(buffer + inc, buffer_size - inc, HEX "  ", offset);
 
   inc += print_buffer(buffer + inc, buffer_size - inc, instruction);
 
@@ -241,14 +240,14 @@ int disassemble(char *buffer, size_t buffer_size, const struct instruction *inst
   bool mpo = must_print_operands(instruction->type);
 
   if (mpo) {
-    inc += print_operand(buffer + inc, buffer_size - inc, &instruction->destination, address,
+    inc += print_operand(buffer + inc, buffer_size - inc, &instruction->destination, offset,
                          instruction->instruction_size);
 
     if (instruction->source.type != ot_none) {
       inc += snprintf(buffer + inc, buffer_size - inc, ", ");
     }
 
-    inc += print_operand(buffer + inc, buffer_size - inc, &instruction->source, address,
+    inc += print_operand(buffer + inc, buffer_size - inc, &instruction->source, offset,
                          instruction->instruction_size);
   }
 

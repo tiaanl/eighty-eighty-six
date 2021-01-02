@@ -5,6 +5,6 @@
 #include <decoder/instruction.h>
 
 int disassemble(char *buffer, size_t buffer_size, const struct instruction *instruction,
-                struct address address);
+                u32 offset);
 
 #endif // DISASSEMBLER_H_
