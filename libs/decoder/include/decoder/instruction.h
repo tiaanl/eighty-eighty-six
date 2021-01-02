@@ -215,16 +215,16 @@ enum instruction_type {
   instruction_type_count,
 };
 
-enum rep_prefix {
-  rp_none,
-  rp_rep,
-  rp_repne,
+enum rep_mode {
+  rm_none,
+  rm_rep,
+  rm_repne,
 };
 
 struct instruction {
   enum instruction_type type;
-  enum segment_register segment_register;
-  enum rep_prefix rep_prefix;
+
+  enum rep_mode rep_mode;
 
   struct operand destination;
   struct operand source;

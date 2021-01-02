@@ -2,6 +2,7 @@
 #define DECODER_OP_CODE_TABLE_H_
 
 #include "decoder/instruction.h"
+#include "decoder_context.h"
 
 #include <base/streams.h>
 
@@ -97,7 +98,8 @@ enum addressing_method {
   am_Yw,
 };
 
-typedef void (*decode_func)(struct input_stream *stream, struct instruction *instruction);
+typedef void (*decode_func)(struct decoder_context *decoder_context,
+                            struct instruction *instruction);
 
 struct op_code_mapping {
   enum instruction_type instruction_type;

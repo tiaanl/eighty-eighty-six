@@ -8,22 +8,17 @@ typedef u8 (*fetch_func)(void *context, u32 position);
 struct input_stream {
   void *context;
   fetch_func fetch_func;
-  u32 position;
 };
 
 void input_stream_init(struct input_stream *stream, void *context, fetch_func fetch_func);
 
-u8 input_stream_peek_u8(struct input_stream *stream, i32 offset);
-u16 input_stream_peek_u16(struct input_stream *stream, i32 offset);
+u8 input_stream_fetch_u8(struct input_stream *stream, u32 position);
+u16 input_stream_fetch_u16(struct input_stream *stream, u32 position);
 
-i8 input_stream_peek_i8(struct input_stream *stream, i32 offset);
-i16 input_stream_peek_i16(struct input_stream *stream, i32 offset);
+i8 input_stream_fetch_i8(struct input_stream *stream, u32 position);
+i16 input_stream_fetch_i16(struct input_stream *stream, u32 position);
 
-u8 input_stream_fetch_u8(struct input_stream *stream);
-u16 input_stream_fetch_u16(struct input_stream *stream);
-
-i8 input_stream_fetch_i8(struct input_stream *stream);
-i16 input_stream_fetch_i16(struct input_stream *stream);
+/* ---------------------------------------------------------------------------------------------- */
 
 typedef void (*store_func)(void *context, u32 position, u8 value);
 

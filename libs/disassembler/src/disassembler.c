@@ -16,14 +16,14 @@ const char *indirect_memory_encoding_to_string(enum indirect_memory_encoding enc
 }
 
 int print_prefix(char *buffer, size_t buffer_size, const struct instruction *instruction) {
-  switch (instruction->rep_prefix) {
-    case rp_rep:
+  switch (instruction->rep_mode) {
+    case rm_rep:
       return snprintf(buffer, buffer_size, "rep ");
 
-    case rp_repne:
+    case rm_repne:
       return snprintf(buffer, buffer_size, "repne ");
 
-    case rp_none:
+    case rm_none:
       break;
 
     default:

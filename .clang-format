@@ -4,4 +4,5 @@ AllowShortFunctionsOnASingleLine: None
 ColumnLimit: 100
 IncludeBlocks: Regroup
 IndentCaseLabels: true
+KeepEmptyLinesAtTheStartOfBlocks: false
 SortIncludes: true

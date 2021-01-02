@@ -3,42 +3,23 @@
 void input_stream_init(struct input_stream *stream, void *context, fetch_func fetch_func) {
   stream->context = context;
   stream->fetch_func = fetch_func;
-  stream->position = 0;
 }
 
-u8 input_stream_peek_u8(struct input_stream *stream, i32 offset) {
-  return stream->fetch_func(stream->context, stream->position + offset);
+u8 input_stream_fetch_u8(struct input_stream *stream, u32 position) {
+  return stream->fetch_func(stream->context, position);
 }
 
-u16 input_stream_peek_u16(struct input_stream *stream, i32 offset) {
-  return stream->fetch_func(stream->context, stream->position + offset) +
-         (stream->fetch_func(stream->context, stream->position + offset + 1) << 8);
+u16 input_stream_fetch_u16(struct input_stream *stream, u32 position) {
+  return input_stream_fetch_u8(stream, position) +
+         (input_stream_fetch_u8(stream, position + 1) << 8);
 }
 
-i8 input_stream_peek_i8(struct input_stream *stream, i32 offset) {
-  return (i8)input_stream_peek_u8(stream, offset);
+i8 input_stream_fetch_i8(struct input_stream *stream, u32 position) {
+  return (i8)input_stream_fetch_u8(stream, position);
 }
 
-i16 input_stream_peek_i16(struct input_stream *stream, i32 offset) {
-  return (i16)input_stream_peek_u16(stream, offset);
-}
-
-u8 input_stream_fetch_u8(struct input_stream *stream) {
-  u8 value = stream->fetch_func(stream->context, stream->position);
-  stream->position++;
-  return value;
-}
-
-u16 input_stream_fetch_u16(struct input_stream *stream) {
-  return input_stream_fetch_u8(stream) + (input_stream_fetch_u8(stream) << 8);
-}
-
-i8 input_stream_fetch_i8(struct input_stream *stream) {
-  return (i8)input_stream_fetch_u8(stream);
-}
-
-i16 input_stream_fetch_i16(struct input_stream *stream) {
-  return (i16)input_stream_fetch_u16(stream);
+i16 input_stream_fetch_i16(struct input_stream *stream, u32 position) {
+  return (i16)input_stream_fetch_u16(stream, position);
 }
 
 void output_stream_init(struct output_stream *stream, void *context, store_func store_func) {

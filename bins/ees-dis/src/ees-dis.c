@@ -95,7 +95,10 @@ int parse_options(struct options *options, int argc, char **argv) {
 }
 
 int main(int argc, char *argv[]) {
-  struct options options;
+  struct options options = {
+      .filename = 0,
+      .offset = 0,
+  };
   int result = parse_options(&options, argc, argv);
   if (result != 0) {
     return result;
@@ -113,20 +116,18 @@ int main(int argc, char *argv[]) {
     u32 code_start = header_size;
     // u32 extra_start = header->pages * 512 - (512 - header->extra_bytes);
 
-    in_stream.position = code_start;
+    options.offset += code_start;
   }
-
-  in_stream.position += options.offset;
 
   static char buffer[128];
   static size_t buffer_size = sizeof(buffer);
 
-  while (in_stream.position < data.data_size) {
+  while (options.offset < data.data_size) {
     struct instruction instruction;
     instruction_init(&instruction);
-    unsigned pos = in_stream.position;
-    decode_instruction(&in_stream, &instruction);
-    disassemble(buffer, buffer_size, &instruction, pos);
+    decode_instruction(&in_stream, options.offset, &instruction);
+    disassemble(buffer, buffer_size, &instruction, options.offset);
+    options.offset += instruction.instruction_size;
     printf("%s\n", buffer);
   }
 
