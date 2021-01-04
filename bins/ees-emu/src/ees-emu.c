@@ -9,8 +9,8 @@
 
 int main() {
   static struct address reset_vector = {
-      .segment = 0xF000,
-      .offset = 0xFFF0,
+      .segment = 0xf000,
+      .offset = 0xfff0,
   };
 
   byte *memory = calloc(DEFAULT_MEMORY_SIZE, 1);

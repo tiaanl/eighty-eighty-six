@@ -301,7 +301,9 @@ void exec_jb(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_jb);
   assert(instruction->destination.size == os_8);
 
-  cpu->ip += instruction->destination.data.as_jump.offset;
+  if (cpu->flags.carry) {
+    cpu->ip += instruction->destination.data.as_jump.offset;
+  }
 }
 
 void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
@@ -320,6 +322,15 @@ void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
     default:
       assert(0);
       break;
+  }
+}
+
+void exec_jnz(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_jnz);
+  assert(instruction->destination.size == os_8);
+
+  if (!cpu->flags.zero) {
+    cpu->ip += instruction->destination.data.as_jump.offset;
   }
 }
 
@@ -385,6 +396,51 @@ void exec_sti(struct cpu *cpu, struct instruction *instruction) {
   cpu->flags.interrupt = 1;
 }
 
+void exec_stos(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_stos);
+  assert(instruction->destination.type == ot_es_di);
+  assert(instruction->source.type == ot_register);
+
+  if (instruction->rep_mode != rm_none && cpu->regs.word[CX] == 0) {
+    return;
+  }
+
+  u32 flat = flatten_address(segment_offset(cpu->segment_16[ES], cpu->regs.word[DI]));
+
+  u8 size_in_bytes;
+
+  switch (instruction->destination.size) {
+    case os_8:
+      bus_store_byte(cpu->bus, flat, cpu->regs.byte[AL]);
+      size_in_bytes = 1;
+      break;
+
+    case os_16:
+      bus_store_byte(cpu->bus, flat, cpu->regs.byte[AL]);
+      bus_store_byte(cpu->bus, flat + 1, cpu->regs.byte[AH]);
+      size_in_bytes = 2;
+      break;
+
+    default:
+      assert(0);
+      break;
+  }
+
+  if (cpu->flags.direction) {
+    cpu->regs.word[DI] -= size_in_bytes;
+  } else {
+    cpu->regs.word[DI] += size_in_bytes;
+  }
+
+  if (instruction->rep_mode != rm_none) {
+    cpu->regs.word[CX] -= 1;
+
+    // FIXME: This is a hack that says move the IP backwards 2 bytes so that the rep can be repeated
+    //        on the next iteration.  2 bytes == rep_prefix + op_code.
+    cpu->ip -= 2;
+  }
+}
+
 void exec_xor(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_xor);
   assert(instruction->destination.size == instruction->source.size);
@@ -418,103 +474,103 @@ void exec_xor(struct cpu *cpu, struct instruction *instruction) {
 }
 
 struct instr_mapping instr_map[] = {
-    {it_aaa, 0},        //
-    {it_aad, 0},        //
-    {it_aam, 0},        //
-    {it_aas, 0},        //
-    {it_adc, 0},        //
-    {it_add, 0},        //
-    {it_and, 0},        //
-    {it_arpl, 0},       //
-    {it_bound, 0},      //
-    {it_call, 0},       //
-    {it_callf, 0},      //
-    {it_cbw, 0},        //
-    {it_clc, 0},        //
-    {it_cld, exec_cld}, //
-    {it_cli, exec_cli}, //
-    {it_cmc, 0},        //
-    {it_cmp, exec_cmp}, //
-    {it_cmps, 0},       //
-    {it_cwd, 0},        //
-    {it_daa, 0},        //
-    {it_das, 0},        //
-    {it_dec, exec_dec}, //
-    {it_div, 0},        //
-    {it_enter, 0},      //
-    {it_fwait, 0},      //
-    {it_hlt, 0},        //
-    {it_idiv, 0},       //
-    {it_imul, 0},       //
-    {it_in, 0},         //
-    {it_inc, exec_inc}, //
-    {it_ins, 0},        //
-    {it_int, exec_int}, //
-    {it_int1, 0},       //
-    {it_int3, 0},       //
-    {it_into, 0},       //
-    {it_iret, 0},       //
-    {it_jb, exec_jb},   //
-    {it_jbe, 0},        //
-    {it_jcxz, 0},       //
-    {it_jl, 0},         //
-    {it_jle, 0},        //
-    {it_jmp, exec_jmp}, //
-    {it_jnb, 0},        //
-    {it_jnbe, 0},       //
-    {it_jnl, 0},        //
-    {it_jnle, 0},       //
-    {it_jno, 0},        //
-    {it_jnp, 0},        //
-    {it_jns, 0},        //
-    {it_jnz, 0},        //
-    {it_jo, 0},         //
-    {it_jp, 0},         //
-    {it_js, 0},         //
-    {it_jz, 0},         //
-    {it_lahf, 0},       //
-    {it_lds, 0},        //
-    {it_lea, 0},        //
-    {it_leave, 0},      //
-    {it_les, 0},        //
-    {it_lods, 0},       //
-    {it_loop, 0},       //
-    {it_loope, 0},      //
-    {it_loopne, 0},     //
-    {it_mov, exec_mov}, //
-    {it_movs, 0},       //
-    {it_mul, 0},        //
-    {it_neg, 0},        //
-    {it_not, 0},        //
-    {it_or, 0},         //
-    {it_out, exec_out}, //
-    {it_outs, 0},       //
-    {it_pop, 0},        //
-    {it_popa, 0},       //
-    {it_popf, 0},       //
-    {it_push, 0},       //
-    {it_pusha, 0},      //
-    {it_pushf, 0},      //
-    {it_rcl, 0},        //
-    {it_rcr, 0},        //
-    {it_ret, 0},        //
-    {it_retf, 0},       //
-    {it_rol, 0},        //
-    {it_ror, 0},        //
-    {it_sahf, 0},       //
-    {it_salc, 0},       //
-    {it_sar, 0},        //
-    {it_sbb, 0},        //
-    {it_scas, 0},       //
-    {it_shl, 0},        //
-    {it_shr, 0},        //
-    {it_stc, 0},        //
-    {it_std, exec_std}, //
-    {it_sti, exec_sti}, //
-    {it_stos, 0},       //
-    {it_sub, 0},        //
-    {it_test, 0},       //
-    {it_xchg, 0},       //
-    {it_xlat, 0},       //
-    {it_xor, exec_xor}, //
+    {it_aaa, 0},          //
+    {it_aad, 0},          //
+    {it_aam, 0},          //
+    {it_aas, 0},          //
+    {it_adc, 0},          //
+    {it_add, 0},          //
+    {it_and, 0},          //
+    {it_arpl, 0},         //
+    {it_bound, 0},        //
+    {it_call, 0},         //
+    {it_callf, 0},        //
+    {it_cbw, 0},          //
+    {it_clc, 0},          //
+    {it_cld, exec_cld},   //
+    {it_cli, exec_cli},   //
+    {it_cmc, 0},          //
+    {it_cmp, exec_cmp},   //
+    {it_cmps, 0},         //
+    {it_cwd, 0},          //
+    {it_daa, 0},          //
+    {it_das, 0},          //
+    {it_dec, exec_dec},   //
+    {it_div, 0},          //
+    {it_enter, 0},        //
+    {it_fwait, 0},        //
+    {it_hlt, 0},          //
+    {it_idiv, 0},         //
+    {it_imul, 0},         //
+    {it_in, 0},           //
+    {it_inc, exec_inc},   //
+    {it_ins, 0},          //
+    {it_int, exec_int},   //
+    {it_int1, 0},         //
+    {it_int3, 0},         //
+    {it_into, 0},         //
+    {it_iret, 0},         //
+    {it_jb, exec_jb},     //
+    {it_jbe, 0},          //
+    {it_jcxz, 0},         //
+    {it_jl, 0},           //
+    {it_jle, 0},          //
+    {it_jmp, exec_jmp},   //
+    {it_jnb, 0},          //
+    {it_jnbe, 0},         //
+    {it_jnl, 0},          //
+    {it_jnle, 0},         //
+    {it_jno, 0},          //
+    {it_jnp, 0},          //
+    {it_jns, 0},          //
+    {it_jnz, exec_jnz},   //
+    {it_jo, 0},           //
+    {it_jp, 0},           //
+    {it_js, 0},           //
+    {it_jz, 0},           //
+    {it_lahf, 0},         //
+    {it_lds, 0},          //
+    {it_lea, 0},          //
+    {it_leave, 0},        //
+    {it_les, 0},          //
+    {it_lods, 0},         //
+    {it_loop, 0},         //
+    {it_loope, 0},        //
+    {it_loopne, 0},       //
+    {it_mov, exec_mov},   //
+    {it_movs, 0},         //
+    {it_mul, 0},          //
+    {it_neg, 0},          //
+    {it_not, 0},          //
+    {it_or, 0},           //
+    {it_out, exec_out},   //
+    {it_outs, 0},         //
+    {it_pop, 0},          //
+    {it_popa, 0},         //
+    {it_popf, 0},         //
+    {it_push, 0},         //
+    {it_pusha, 0},        //
+    {it_pushf, 0},        //
+    {it_rcl, 0},          //
+    {it_rcr, 0},          //
+    {it_ret, 0},          //
+    {it_retf, 0},         //
+    {it_rol, 0},          //
+    {it_ror, 0},          //
+    {it_sahf, 0},         //
+    {it_salc, 0},         //
+    {it_sar, 0},          //
+    {it_sbb, 0},          //
+    {it_scas, 0},         //
+    {it_shl, 0},          //
+    {it_shr, 0},          //
+    {it_stc, 0},          //
+    {it_std, exec_std},   //
+    {it_sti, exec_sti},   //
+    {it_stos, exec_stos}, //
+    {it_sub, 0},          //
+    {it_test, 0},         //
+    {it_xchg, 0},         //
+    {it_xlat, 0},         //
+    {it_xor, exec_xor},   //
 };

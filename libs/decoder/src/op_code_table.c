@@ -333,8 +333,8 @@ struct op_code_mapping op_code_table[] = {
     /* a7 */ {it_cmps,     am_Xw,               am_Yw, am_Xx, decode_Xw_Yw_Xx},
     /* a8 */ {it_test,     am_AL,               am_Ib, am_Xx, decode_AL_Ib_Xx},
     /* a9 */ {it_test,     am_AX,               am_Iw, am_Xx, decode_AX_Iw_Xx},
-    /* aa */ {it_stos,     am_Yb,               am_AL, am_Xx, decode_Yb_AL_Xx},            // rep stosb [ES:DI+offset], al
-    /* ab */ {it_stos,     am_Yw,               am_AX, am_Xx, decode_Yw_AX_Xx},
+    /* aa */ {it_stos,     am_Yb,               am_AL, am_Xx, decode_Yb_AL_Xx},  // rep stos BYTE PTR es:[di], al
+    /* ab */ {it_stos,     am_Yw,               am_AX, am_Xx, decode_Yw_AX_Xx},  // rep stos WORD PTR es:[di], ax
     /* ac */ {it_lods,     am_AL,               am_Xb, am_Xx, decode_AL_Xb_Xx},
     /* ad */ {it_lods,     am_AX,               am_Xw, am_Xx, decode_AX_Xw_Xx},
     /* ae */ {it_scas,     am_AL,               am_Yb, am_Xx, decode_AL_Yb_Xx},
@@ -410,8 +410,8 @@ struct op_code_mapping op_code_table[] = {
 
     /* f0 */ {it_invalid}, // Lock?
     /* f1 */ {it_int1,     am_Xx,               am_Xx, am_Xx, decode_Xx_Xx_Xx},
-    /* f2 */ {it_prefix,   am_Xx,               am_Xx, am_Xx, decode_rep_prefix},          // repne prefix
-    /* f3 */ {it_prefix,   am_Xx,               am_Xx, am_Xx, decode_repne_prefix},        // rep prefix
+    /* f2 */ {it_prefix,   am_Xx,               am_Xx, am_Xx, decode_repne_prefix},          // repne prefix
+    /* f3 */ {it_prefix,   am_Xx,               am_Xx, am_Xx, decode_rep_prefix},        // rep prefix
     /* f4 */ {it_hlt,      am_Xx,               am_Xx, am_Xx, decode_Xx_Xx_Xx},
     /* f5 */ {it_cmc,      am_Xx,               am_Xx, am_Xx, decode_Xx_Xx_Xx},
     /* f6 */ {it_group,    am_Eb,               am_Ib, am_Xx, 0, op_code_table_group_f6},

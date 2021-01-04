@@ -178,12 +178,12 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
 
     case ot_ds_si: {
       int inc = print_pointer_size(buffer, buffer_size, operand->size);
-      return inc + snprintf(buffer + inc, buffer_size - inc, "ds:si");
+      return inc + snprintf(buffer + inc, buffer_size - inc, "ds:[si]");
     }
 
     case ot_es_di: {
       int inc = print_pointer_size(buffer, buffer_size, operand->size);
-      return inc + snprintf(buffer + inc, buffer_size - inc, "es:di");
+      return inc + snprintf(buffer + inc, buffer_size - inc, "es:[di]");
     }
 
     case ot_none:

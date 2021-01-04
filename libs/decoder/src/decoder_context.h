@@ -14,7 +14,9 @@ struct decoder_context {
 
 #define DECODER_FETCH(TYPE)                                                                        \
   static inline TYPE decoder_fetch_##TYPE(struct decoder_context *decoder_context) {               \
-    return input_stream_fetch_##TYPE(decoder_context->stream, decoder_context->position++);        \
+    TYPE result = input_stream_fetch_##TYPE(decoder_context->stream, decoder_context->position);   \
+    decoder_context->position += sizeof(TYPE);                                                     \
+    return result;                                                                                 \
   }
 
 DECODER_FETCH(u8)
