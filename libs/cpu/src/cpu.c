@@ -48,17 +48,17 @@ void cpu_step(struct cpu *cpu) {
 
   struct input_stream stream;
   input_stream_init(&stream, cpu->bus, input_stream_fetch_from_bus);
-  stream.position = flat;
 
   struct instruction instruction;
-  decode_instruction(&stream, &instruction);
+  decode_instruction(&stream, flat, &instruction);
+
+  print_registers(cpu);
 
   assert(instruction.instruction_size);
   cpu->ip += instruction.instruction_size;
 
-  print_registers(cpu);
   char buf[128];
-  disassemble(buf, sizeof(buf), &instruction, cs_ip);
+  disassemble(buf, sizeof(buf), &instruction, flat);
   puts(buf);
   puts("");
 
