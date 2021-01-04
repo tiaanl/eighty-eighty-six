@@ -434,11 +434,11 @@ void exec_stos(struct cpu *cpu, struct instruction *instruction) {
 
   if (instruction->rep_mode != rm_none) {
     cpu->regs.word[CX] -= 1;
-
-    // FIXME: This is a hack that says move the IP backwards 2 bytes so that the rep can be repeated
-    //        on the next iteration.  2 bytes == rep_prefix + op_code.
-    cpu->ip -= 2;
   }
+
+  assert(instruction->instruction_size);
+  // Move the IP back to where this instruction started so that it gets repeated.
+  cpu->ip -= instruction->instruction_size;
 }
 
 void exec_xor(struct cpu *cpu, struct instruction *instruction) {
