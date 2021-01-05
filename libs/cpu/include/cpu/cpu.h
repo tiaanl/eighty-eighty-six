@@ -19,7 +19,7 @@ struct cpu {
   struct bus *bus;
 
   union regs regs;
-  word segment_16[segment_register_count];
+  word segs[segment_register_count];
   word ip;
   union flags flags;
 };

@@ -49,7 +49,7 @@ word fetch_operand_value_word(struct cpu *cpu, struct operand *operand) {
 
   switch (operand->type) {
     case ot_direct: {
-      u32 address = flatten_address(segment_offset(cpu->segment_16[operand->data.as_direct.seg_reg],
+      u32 address = flatten_address(segment_offset(cpu->segs[operand->data.as_direct.seg_reg],
                                                    operand->data.as_direct.address));
       byte low = bus_fetch_byte(cpu->bus, address);
       byte high = bus_fetch_byte(cpu->bus, address + 1);
@@ -73,7 +73,7 @@ void store_operand_value_word(struct cpu *cpu, struct operand *operand, word val
 
   switch (operand->type) {
     case ot_indirect: {
-      u16 segment = cpu->segment_16[operand->data.as_indirect.seg_reg];
+      u16 segment = cpu->segs[operand->data.as_indirect.seg_reg];
       u16 offset = 0;
 
       switch (operand->data.as_indirect.encoding) {
@@ -126,7 +126,7 @@ void store_operand_value_word(struct cpu *cpu, struct operand *operand, word val
       break;
 
     case ot_segment_register:
-      cpu->segment_16[operand->data.as_segment_register.reg] = value;
+      cpu->segs[operand->data.as_segment_register.reg] = value;
       break;
 
     default:
@@ -183,7 +183,54 @@ FLAGS_LOG(word)
 
 #undef FLAGS_LOG
 
+static void push_word(struct cpu *cpu, word value) {
+  cpu->regs.word[SP] -= sizeof(word);
+  u32 addr = flatten_address(segment_offset(cpu->segs[SS], cpu->regs.word[SP]));
+  bus_store_word(cpu->bus, addr, value);
+}
+
+static word pop(struct cpu *cpu) {
+  u32 addr = flatten_address(segment_offset(cpu->segs[SS], cpu->regs.word[SP]));
+  word value = bus_fetch_word(cpu->bus, addr);
+  cpu->regs.word[SP] += sizeof(word);
+  return value;
+}
+
 /* ---------------------------------------------------------------------------------------------- */
+
+void exec_add(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_add);
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      byte d = fetch_operand_value_byte(cpu, &instruction->destination);
+      byte s = fetch_operand_value_byte(cpu, &instruction->source);
+      flags_add_byte(&cpu->flags, d, s);
+      store_operand_value_byte(cpu, &instruction->destination, d + s);
+      break;
+    }
+
+    case os_16: {
+      word d = fetch_operand_value_word(cpu, &instruction->destination);
+      word s = fetch_operand_value_word(cpu, &instruction->source);
+      flags_add_word(&cpu->flags, d, s);
+      store_operand_value_word(cpu, &instruction->destination, d + s);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void exec_call(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_call);
+
+  i16 offset = instruction->destination.data.as_jump.offset;
+  push_word(cpu, cpu->ip);
+  cpu->ip += offset;
+}
 
 void exec_cld(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_cld);
@@ -254,6 +301,41 @@ void exec_dec(struct cpu *cpu, struct instruction *instruction) {
 #undef OP
 }
 
+void exec_div(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_div);
+
+  // TODO: Handle error cases
+
+#define OP(SIZE, UPSIZE, OVERFLOW)                                                                 \
+  do {                                                                                             \
+    SIZE left = fetch_operand_value_##SIZE(cpu, &instruction->destination);                        \
+    SIZE right = fetch_operand_value_##SIZE(cpu, &instruction->source);                            \
+                                                                                                   \
+    if (!right || (((UPSIZE)left / (UPSIZE)right) > (OVERFLOW))) {                                 \
+    } else {                                                                                       \
+      store_operand_value_##SIZE(cpu, &instruction->destination, left / right);                    \
+    }                                                                                              \
+  } while (0)
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      OP(byte, word, 0xff);
+      break;
+    }
+
+    case os_16: {
+      OP(word, dword, 0xffff);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+#undef OP
+}
+
 void exec_inc(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_inc);
 
@@ -302,7 +384,7 @@ void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
 
   switch (instruction->destination.type) {
     case ot_far_jump:
-      cpu->segment_16[CS] = instruction->destination.data.as_far_jump.segment;
+      cpu->segs[CS] = instruction->destination.data.as_far_jump.segment;
       cpu->ip = instruction->destination.data.as_far_jump.offset;
       break;
 
@@ -313,6 +395,16 @@ void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
     default:
       assert(0);
       break;
+  }
+}
+
+void exec_jcxz(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_jcxz);
+  assert(instruction->destination.type == ot_jump);
+
+  i16 offset = instruction->destination.data.as_jump.offset;
+  if (cpu->regs.word[CX] == 0) {
+    cpu->ip += offset;
   }
 }
 
@@ -474,6 +566,92 @@ void exec_out(struct cpu *cpu, struct instruction *instruction) {
   }
 }
 
+void exec_push(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_push);
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      byte value = fetch_operand_value_byte(cpu, &instruction->destination);
+      push_word(cpu, value);
+      break;
+    }
+
+    case os_16: {
+      word value = fetch_operand_value_word(cpu, &instruction->destination);
+      push_word(cpu, value);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+}
+
+void exec_ret(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_ret);
+
+  cpu->ip = pop(cpu);
+}
+
+void exec_scas(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_scas);
+  assert(instruction->destination.type == ot_register);
+  assert(instruction->source.type == ot_es_di);
+
+  if (instruction->rep_mode != rm_none && cpu->regs.word[CX] == 0) {
+    return;
+  }
+
+  u32 es_di = flatten_address(segment_offset(cpu->segs[ES], cpu->regs.word[DI]));
+
+  switch (instruction->destination.size) {
+    case os_8: {
+      byte left = cpu->regs.byte[AL];
+      byte right = bus_fetch_byte(cpu->bus, es_di);
+      flags_sub_byte(&cpu->flags, left, right);
+      break;
+    }
+
+    case os_16: {
+      word left = cpu->regs.word[AX];
+      word right = bus_fetch_word(cpu->bus, es_di);
+      flags_sub_word(&cpu->flags, left, right);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+  if (cpu->flags.direction) {
+    cpu->regs.word[DI] -= 1;
+  } else {
+    cpu->regs.word[DI] += 1;
+  }
+
+  if (instruction->rep_mode != rm_none) {
+    cpu->regs.word[CX] -= 1;
+  }
+
+  if (instruction->rep_mode == rm_rep && !cpu->flags.zero) {
+    return;
+  } else if (instruction->rep_mode == rm_repne && cpu->flags.zero) {
+    return;
+  }
+
+  assert(instruction->instruction_size);
+  // Move the IP back to where this instruction started so that it gets repeated.
+  cpu->ip -= instruction->instruction_size;
+}
+
+void exec_stc(struct cpu *cpu, struct instruction *instruction) {
+  assert(instruction->type == it_stc);
+
+  cpu->flags.carry = 1;
+}
+
 void exec_std(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_std);
 
@@ -495,7 +673,7 @@ void exec_stos(struct cpu *cpu, struct instruction *instruction) {
     return;
   }
 
-  u32 flat = flatten_address(segment_offset(cpu->segment_16[ES], cpu->regs.word[DI]));
+  u32 flat = flatten_address(segment_offset(cpu->segs[ES], cpu->regs.word[DI]));
 
   u8 size_in_bytes;
 
@@ -569,11 +747,11 @@ struct instr_mapping instr_map[] = {
     {it_aam, 0},                     //
     {it_aas, 0},                     //
     {it_adc, 0},                     //
-    {it_add, 0},                     //
+    {it_add, exec_add},              //
     {it_and, 0},                     //
     {it_arpl, 0},                    //
     {it_bound, 0},                   //
-    {it_call, 0},                    //
+    {it_call, exec_call},            //
     {it_callf, 0},                   //
     {it_cbw, 0},                     //
     {it_clc, 0},                     //
@@ -586,7 +764,7 @@ struct instr_mapping instr_map[] = {
     {it_daa, 0},                     //
     {it_das, 0},                     //
     {it_dec, exec_dec},              //
-    {it_div, 0},                     //
+    {it_div, exec_div},              //
     {it_enter, 0},                   //
     {it_fwait, 0},                   //
     {it_hlt, 0},                     //
@@ -602,7 +780,7 @@ struct instr_mapping instr_map[] = {
     {it_iret, 0},                    //
     {it_jb, exec_jump_conditional},  //
     {it_jbe, 0},                     //
-    {it_jcxz, 0},                    //
+    {it_jcxz, exec_jcxz},            //
     {it_jl, 0},                      //
     {it_jle, 0},                     //
     {it_jmp, exec_jmp},              //
@@ -638,12 +816,12 @@ struct instr_mapping instr_map[] = {
     {it_pop, 0},                     //
     {it_popa, 0},                    //
     {it_popf, 0},                    //
-    {it_push, 0},                    //
+    {it_push, exec_push},            //
     {it_pusha, 0},                   //
     {it_pushf, 0},                   //
     {it_rcl, 0},                     //
     {it_rcr, 0},                     //
-    {it_ret, 0},                     //
+    {it_ret, exec_ret},              //
     {it_retf, 0},                    //
     {it_rol, 0},                     //
     {it_ror, 0},                     //
@@ -651,10 +829,10 @@ struct instr_mapping instr_map[] = {
     {it_salc, 0},                    //
     {it_sar, 0},                     //
     {it_sbb, 0},                     //
-    {it_scas, 0},                    //
+    {it_scas, exec_scas},            //
     {it_shl, 0},                     //
     {it_shr, 0},                     //
-    {it_stc, 0},                     //
+    {it_stc, exec_stc},              //
     {it_std, exec_std},              //
     {it_sti, exec_sti},              //
     {it_stos, exec_stos},            //

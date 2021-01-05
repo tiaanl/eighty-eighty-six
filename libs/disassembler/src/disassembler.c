@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define MNEMONIC "%-6s"
+#define MNEMONIC "%-8s"
 
 const char *indirect_memory_encoding_to_string(enum indirect_memory_encoding encoding) {
   static const char *mapping[8] = {

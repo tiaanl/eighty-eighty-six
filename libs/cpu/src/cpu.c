@@ -26,7 +26,7 @@ void cpu_init(struct cpu *cpu, struct ports *ports, struct bus *bus, struct addr
   cpu->ports = ports;
   cpu->bus = bus;
 
-  cpu->segment_16[CS] = reset_vector.segment;
+  cpu->segs[CS] = reset_vector.segment;
   cpu->ip = reset_vector.offset;
 }
 
@@ -43,7 +43,7 @@ u8 input_stream_fetch_from_bus(void *context, u32 position) {
 }
 
 void cpu_step(struct cpu *cpu) {
-  struct address cs_ip = segment_offset(cpu->segment_16[CS], cpu->ip);
+  struct address cs_ip = segment_offset(cpu->segs[CS], cpu->ip);
   u32 flat = flatten_address(cs_ip);
 
   struct input_stream stream;
