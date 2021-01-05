@@ -297,15 +297,6 @@ void exec_int(struct cpu *cpu, struct instruction *instruction) {
   printf("## int " HEX_8 "\n\n", instruction->destination.data.as_immediate.immediate_8);
 }
 
-void exec_jb(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == it_jb);
-  assert(instruction->destination.size == os_8);
-
-  if (cpu->flags.carry) {
-    cpu->ip += instruction->destination.data.as_jump.offset;
-  }
-}
-
 void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->type == it_jmp);
 
@@ -325,12 +316,111 @@ void exec_jmp(struct cpu *cpu, struct instruction *instruction) {
   }
 }
 
-void exec_jnz(struct cpu *cpu, struct instruction *instruction) {
-  assert(instruction->type == it_jnz);
+void exec_jump_conditional(struct cpu *cpu, struct instruction *instruction) {
   assert(instruction->destination.size == os_8);
 
-  if (!cpu->flags.zero) {
-    cpu->ip += instruction->destination.data.as_jump.offset;
+  i16 offset = instruction->destination.data.as_jump.offset;
+
+  switch (instruction->type) {
+    case it_jo:
+      if (cpu->flags.overflow) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jno:
+      if (!cpu->flags.overflow) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jb:
+      if (cpu->flags.carry) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnb:
+      if (!cpu->flags.carry) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jz:
+      if (cpu->flags.zero) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnz:
+      if (!cpu->flags.zero) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jbe:
+      if (cpu->flags.carry || cpu->flags.zero) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnbe:
+      if (!cpu->flags.carry && !cpu->flags.zero) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_js:
+      if (cpu->flags.sign) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jns:
+      if (!cpu->flags.sign) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jp:
+      if (cpu->flags.parity) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnp:
+      if (!cpu->flags.parity) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jl:
+      if (cpu->flags.sign != cpu->flags.overflow) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnl:
+      if (cpu->flags.sign == cpu->flags.overflow) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jle:
+      if ((cpu->flags.sign != cpu->flags.overflow) || cpu->flags.zero) {
+        cpu->ip += offset;
+      }
+      break;
+
+    case it_jnle:
+      if (!cpu->flags.zero && (cpu->flags.sign == cpu->flags.overflow)) {
+        cpu->ip += offset;
+      }
+      break;
+
+    default:
+      assert(0);
+      break;
   }
 }
 
@@ -474,103 +564,103 @@ void exec_xor(struct cpu *cpu, struct instruction *instruction) {
 }
 
 struct instr_mapping instr_map[] = {
-    {it_aaa, 0},          //
-    {it_aad, 0},          //
-    {it_aam, 0},          //
-    {it_aas, 0},          //
-    {it_adc, 0},          //
-    {it_add, 0},          //
-    {it_and, 0},          //
-    {it_arpl, 0},         //
-    {it_bound, 0},        //
-    {it_call, 0},         //
-    {it_callf, 0},        //
-    {it_cbw, 0},          //
-    {it_clc, 0},          //
-    {it_cld, exec_cld},   //
-    {it_cli, exec_cli},   //
-    {it_cmc, 0},          //
-    {it_cmp, exec_cmp},   //
-    {it_cmps, 0},         //
-    {it_cwd, 0},          //
-    {it_daa, 0},          //
-    {it_das, 0},          //
-    {it_dec, exec_dec},   //
-    {it_div, 0},          //
-    {it_enter, 0},        //
-    {it_fwait, 0},        //
-    {it_hlt, 0},          //
-    {it_idiv, 0},         //
-    {it_imul, 0},         //
-    {it_in, 0},           //
-    {it_inc, exec_inc},   //
-    {it_ins, 0},          //
-    {it_int, exec_int},   //
-    {it_int1, 0},         //
-    {it_int3, 0},         //
-    {it_into, 0},         //
-    {it_iret, 0},         //
-    {it_jb, exec_jb},     //
-    {it_jbe, 0},          //
-    {it_jcxz, 0},         //
-    {it_jl, 0},           //
-    {it_jle, 0},          //
-    {it_jmp, exec_jmp},   //
-    {it_jnb, 0},          //
-    {it_jnbe, 0},         //
-    {it_jnl, 0},          //
-    {it_jnle, 0},         //
-    {it_jno, 0},          //
-    {it_jnp, 0},          //
-    {it_jns, 0},          //
-    {it_jnz, exec_jnz},   //
-    {it_jo, 0},           //
-    {it_jp, 0},           //
-    {it_js, 0},           //
-    {it_jz, 0},           //
-    {it_lahf, 0},         //
-    {it_lds, 0},          //
-    {it_lea, 0},          //
-    {it_leave, 0},        //
-    {it_les, 0},          //
-    {it_lods, 0},         //
-    {it_loop, 0},         //
-    {it_loope, 0},        //
-    {it_loopne, 0},       //
-    {it_mov, exec_mov},   //
-    {it_movs, 0},         //
-    {it_mul, 0},          //
-    {it_neg, 0},          //
-    {it_not, 0},          //
-    {it_or, 0},           //
-    {it_out, exec_out},   //
-    {it_outs, 0},         //
-    {it_pop, 0},          //
-    {it_popa, 0},         //
-    {it_popf, 0},         //
-    {it_push, 0},         //
-    {it_pusha, 0},        //
-    {it_pushf, 0},        //
-    {it_rcl, 0},          //
-    {it_rcr, 0},          //
-    {it_ret, 0},          //
-    {it_retf, 0},         //
-    {it_rol, 0},          //
-    {it_ror, 0},          //
-    {it_sahf, 0},         //
-    {it_salc, 0},         //
-    {it_sar, 0},          //
-    {it_sbb, 0},          //
-    {it_scas, 0},         //
-    {it_shl, 0},          //
-    {it_shr, 0},          //
-    {it_stc, 0},          //
-    {it_std, exec_std},   //
-    {it_sti, exec_sti},   //
-    {it_stos, exec_stos}, //
-    {it_sub, 0},          //
-    {it_test, 0},         //
-    {it_xchg, 0},         //
-    {it_xlat, 0},         //
-    {it_xor, exec_xor},   //
+    {it_aaa, 0},                     //
+    {it_aad, 0},                     //
+    {it_aam, 0},                     //
+    {it_aas, 0},                     //
+    {it_adc, 0},                     //
+    {it_add, 0},                     //
+    {it_and, 0},                     //
+    {it_arpl, 0},                    //
+    {it_bound, 0},                   //
+    {it_call, 0},                    //
+    {it_callf, 0},                   //
+    {it_cbw, 0},                     //
+    {it_clc, 0},                     //
+    {it_cld, exec_cld},              //
+    {it_cli, exec_cli},              //
+    {it_cmc, 0},                     //
+    {it_cmp, exec_cmp},              //
+    {it_cmps, 0},                    //
+    {it_cwd, 0},                     //
+    {it_daa, 0},                     //
+    {it_das, 0},                     //
+    {it_dec, exec_dec},              //
+    {it_div, 0},                     //
+    {it_enter, 0},                   //
+    {it_fwait, 0},                   //
+    {it_hlt, 0},                     //
+    {it_idiv, 0},                    //
+    {it_imul, 0},                    //
+    {it_in, 0},                      //
+    {it_inc, exec_inc},              //
+    {it_ins, 0},                     //
+    {it_int, exec_int},              //
+    {it_int1, 0},                    //
+    {it_int3, 0},                    //
+    {it_into, 0},                    //
+    {it_iret, 0},                    //
+    {it_jb, exec_jump_conditional},  //
+    {it_jbe, 0},                     //
+    {it_jcxz, 0},                    //
+    {it_jl, 0},                      //
+    {it_jle, 0},                     //
+    {it_jmp, exec_jmp},              //
+    {it_jnb, 0},                     //
+    {it_jnbe, 0},                    //
+    {it_jnl, 0},                     //
+    {it_jnle, 0},                    //
+    {it_jno, 0},                     //
+    {it_jnp, 0},                     //
+    {it_jns, 0},                     //
+    {it_jnz, exec_jump_conditional}, //
+    {it_jo, 0},                      //
+    {it_jp, 0},                      //
+    {it_js, 0},                      //
+    {it_jz, 0},                      //
+    {it_lahf, 0},                    //
+    {it_lds, 0},                     //
+    {it_lea, 0},                     //
+    {it_leave, 0},                   //
+    {it_les, 0},                     //
+    {it_lods, 0},                    //
+    {it_loop, 0},                    //
+    {it_loope, 0},                   //
+    {it_loopne, 0},                  //
+    {it_mov, exec_mov},              //
+    {it_movs, 0},                    //
+    {it_mul, 0},                     //
+    {it_neg, 0},                     //
+    {it_not, 0},                     //
+    {it_or, 0},                      //
+    {it_out, exec_out},              //
+    {it_outs, 0},                    //
+    {it_pop, 0},                     //
+    {it_popa, 0},                    //
+    {it_popf, 0},                    //
+    {it_push, 0},                    //
+    {it_pusha, 0},                   //
+    {it_pushf, 0},                   //
+    {it_rcl, 0},                     //
+    {it_rcr, 0},                     //
+    {it_ret, 0},                     //
+    {it_retf, 0},                    //
+    {it_rol, 0},                     //
+    {it_ror, 0},                     //
+    {it_sahf, 0},                    //
+    {it_salc, 0},                    //
+    {it_sar, 0},                     //
+    {it_sbb, 0},                     //
+    {it_scas, 0},                    //
+    {it_shl, 0},                     //
+    {it_shr, 0},                     //
+    {it_stc, 0},                     //
+    {it_std, exec_std},              //
+    {it_sti, exec_sti},              //
+    {it_stos, exec_stos},            //
+    {it_sub, 0},                     //
+    {it_test, 0},                    //
+    {it_xchg, 0},                    //
+    {it_xlat, 0},                    //
+    {it_xor, exec_xor},              //
 };
