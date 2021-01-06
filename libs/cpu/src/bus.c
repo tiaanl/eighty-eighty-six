@@ -9,12 +9,31 @@ void bus_init(struct bus *bus, byte *memory, u32 memory_size) {
   bus->memory_size = memory_size;
 }
 
-byte bus_fetch_byte(struct bus *bus, u32 addr) {
-  return bus->memory[addr];
+void bus_add_listener(struct bus *bus, void *context, bus_listener_func fetch_func,
+                      bus_listener_func store_func) {
+  struct bus_listener *listener = &bus->listeners[bus->bus_listener_count++];
+
+  listener->context = context;
+  listener->fetch_func = fetch_func;
+  listener->store_func = store_func;
 }
 
-void bus_store_byte(struct bus *bus, u32 addr, byte b) {
-  bus->memory[addr] = b;
+byte bus_fetch_byte(struct bus *bus, u32 addr) {
+  byte value = bus->memory[addr];
+
+  for (unsigned i = 0; i < bus->bus_listener_count; ++i) {
+    bus->listeners[i].fetch_func(addr, value, bus->listeners[i].context);
+  }
+
+  return value;
+}
+
+void bus_store_byte(struct bus *bus, u32 addr, byte value) {
+  bus->memory[addr] = value;
+
+  for (unsigned i = 0; i < bus->bus_listener_count; ++i) {
+    bus->listeners[i].store_func(addr, value, bus->listeners[i].context);
+  }
 }
 
 word bus_fetch_word(struct bus *bus, u32 addr) {
