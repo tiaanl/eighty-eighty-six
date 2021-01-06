@@ -2,10 +2,20 @@
 #include <cpu/bus.h>
 #include <cpu/cpu.h>
 #include <cpu/ports.h>
+#include <debugger/debugger.h>
 #include <malloc.h>
+#include <pthread.h>
 
 // 1Mb of memory
 #define DEFAULT_MEMORY_SIZE 0x100000
+
+void *cpu_loop(void *cpu) {
+  while (1) {
+    cpu_step(cpu);
+  }
+
+  return 0;
+}
 
 int main() {
   static struct address reset_vector = {
@@ -35,9 +45,30 @@ int main() {
   fread(memory + DEFAULT_MEMORY_SIZE - file_size, file_size, 1, handle);
   fclose(handle);
 
-  while (1) {
-    cpu_step(&cpu);
+  struct debugger *debugger = malloc(sizeof(*debugger));
+  if (debugger_init(debugger) < 0) {
+    return 1;
   }
+
+  debugger_map_bus_listener(debugger, &bus);
+
+  pthread_t cpu_thread;
+  if (pthread_create(&cpu_thread, 0, cpu_loop, &cpu)) {
+    return 1;
+  }
+
+  while (1) {
+    if (!debugger_pre_step(debugger, &cpu)) {
+      break;
+    }
+    // cpu_step(&cpu);
+    if (!debugger_post_step(debugger, &cpu)) {
+      break;
+    }
+  }
+
+  debugger_destroy(debugger);
+  free(debugger);
 
   free(memory);
   free(ports);

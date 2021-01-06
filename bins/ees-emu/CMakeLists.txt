@@ -3,4 +3,4 @@ set(SOURCE_FILES
     )
 
 add_executable(ees-emu ${SOURCE_FILES})
-target_link_libraries(ees-emu PRIVATE cpu)
+target_link_libraries(ees-emu PRIVATE cpu debugger)

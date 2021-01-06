@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
 project(eight-eighty-six)
 
+find_package(glad CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+
 add_subdirectory(bins)
 add_subdirectory(libs)
 
