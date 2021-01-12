@@ -1,6 +1,8 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <stddef.h>
+
 typedef char i8;
 typedef short i16;
 typedef int i32;
@@ -18,6 +20,9 @@ typedef unsigned char byte;
 typedef unsigned short word;
 typedef unsigned int dword;
 typedef unsigned long long qword;
+
+typedef size_t usize;
+typedef ptrdiff_t isize;
 
 #define UNUSED(x) (void)(x)
 
