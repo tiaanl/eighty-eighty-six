@@ -211,6 +211,12 @@ enum instruction_type {
   instruction_type_count,
 };
 
+enum instruction_data_size {
+  ids_none,
+  ids_byte,
+  ids_word,
+};
+
 enum rep_mode {
   rm_none,
   rm_rep,
@@ -218,6 +224,7 @@ enum rep_mode {
 };
 
 struct instruction {
+  enum instruction_data_size data_size;
   enum instruction_type type;
 
   enum rep_mode rep_mode;

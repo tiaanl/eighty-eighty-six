@@ -63,6 +63,7 @@ typedef void (*decode_func)(struct decoder_context *decoder_context,
 struct op_code_mapping {
   enum op_code_type op_code_type;
   enum instruction_type instruction_type;
+  enum instruction_data_size instruction_data_size;
   enum addressing_method tmp1;
   enum addressing_method tmp2;
   enum addressing_method tmp3;
