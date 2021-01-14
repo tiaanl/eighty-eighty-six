@@ -22,14 +22,14 @@ void decode_instruction(struct input_stream *stream, u32 position,
 
   // If the mapping is a prefix, then we run the decoder function for it and fetch the next byte
   // as the op_code and get a new mapping.
-  if (mapping->instruction_type == it_prefix && mapping->decode_func) {
+  if (mapping->op_code_type == oct_prefix && mapping->decode_func) {
     mapping->decode_func(&decoder_context, instruction);
     op_code = decoder_fetch_u8(&decoder_context);
     mapping = &op_code_table[op_code];
   }
 
   // If the mapping is a group, then we replace the mapping with one in the group table.
-  if (mapping->instruction_type == it_group) {
+  if (mapping->op_code_type == oct_group) {
     u8 index = op_code >> 3 & 0x07;
     mapping = &mapping->group_table[index];
   }

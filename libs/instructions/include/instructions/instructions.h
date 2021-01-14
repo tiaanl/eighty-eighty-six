@@ -208,10 +208,6 @@ enum instruction_type {
   it_xlat,
   it_xor,
 
-  it_prefix,
-  it_group,
-  it_invalid,
-
   instruction_type_count,
 };
 
