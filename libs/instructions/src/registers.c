@@ -1,4 +1,4 @@
-#include "decoder/registers.h"
+#include "instructions/registers.h"
 
 #include <assert.h>
 

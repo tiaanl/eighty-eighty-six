@@ -1,10 +1,10 @@
 #ifndef DECODE_FUNCS_H_
 #define DECODE_FUNCS_H_
 
-#include "decoder/instruction.h"
 #include "decoder_context.h"
 
 #include <base/streams.h>
+#include <instructions/instructions.h>
 
 void decode_AL_DX_Xx(struct decoder_context *decoder_context, struct instruction *instruction);
 void decode_AL_Eb_Xx(struct decoder_context *decoder_context, struct instruction *instruction);

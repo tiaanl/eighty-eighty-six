@@ -2,7 +2,7 @@
 #define INSTRUCTION_H_
 
 #include <base/platform.h>
-#include <decoder/registers.h>
+#include <instructions/registers.h>
 #include <string.h>
 
 enum operand_type {

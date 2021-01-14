@@ -3,7 +3,7 @@
 
 #include "cpu/cpu.h"
 
-#include <decoder/instruction.h>
+#include <instructions/instructions.h>
 
 typedef void (*exec_func)(struct cpu *cpu, struct instruction *instruction);
 

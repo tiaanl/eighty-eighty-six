@@ -1,4 +1,4 @@
-#include "decoder/instruction.h"
+#include "instructions/instructions.h"
 
 #include <assert.h>
 

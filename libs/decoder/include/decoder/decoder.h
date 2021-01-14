@@ -2,7 +2,7 @@
 #define DECODER_H_
 
 #include <base/streams.h>
-#include <decoder/instruction.h>
+#include <instructions/instructions.h>
 
 void decode_instruction(struct input_stream *stream, u32 position, struct instruction *instruction);
 

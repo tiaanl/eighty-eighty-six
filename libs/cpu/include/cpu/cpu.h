@@ -7,7 +7,7 @@
 
 #include <base/address.h>
 #include <base/platform.h>
-#include <decoder/registers.h>
+#include <instructions/registers.h>
 
 union regs {
   word word[register_16_count];

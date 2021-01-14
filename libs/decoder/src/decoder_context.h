@@ -1,9 +1,8 @@
 #ifndef DECODER_DECODER_CONTEXT_H_
 #define DECODER_DECODER_CONTEXT_H_
 
-#include "decoder/registers.h"
-
 #include <base/streams.h>
+#include <instructions/registers.h>
 
 struct decoder_context {
   struct input_stream *stream;
