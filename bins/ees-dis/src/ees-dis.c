@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
   struct input_stream in_stream;
   input_stream_init(&in_stream, &data, binary_data_fetch);
 
+  /* DOS MZ executable format. */
   if (*(u16 *)data.data == 0x5a4d) {
     struct executable_header_mz *header = (struct executable_header_mz *)data.data;
 
@@ -117,6 +118,16 @@ int main(int argc, char *argv[]) {
     // u32 extra_start = header->pages * 512 - (512 - header->extra_bytes);
 
     options.offset += code_start;
+  }
+
+  /* BIOS file */
+  if (data.data[data.data_size - 0x10] == 0xea) {
+    word offset = data.data[data.data_size - 0x0f] + (data.data[data.data_size - 0x0e] << 8);
+    word segment = data.data[data.data_size - 0x0d] + (data.data[data.data_size - 0x0c] << 8);
+    u32 flat = segment << 4 | offset;
+    u32 offset_in_memory = flat - (0x100000 - data.data_size);
+    options.offset = offset_in_memory;
+    printf("Detected BIOS file, starting at: 0x%05x\n", offset_in_memory);
   }
 
   static char buffer[128];

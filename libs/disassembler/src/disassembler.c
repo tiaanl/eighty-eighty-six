@@ -229,7 +229,7 @@ int disassemble(char *buffer, size_t buffer_size, const struct instruction *inst
                 u32 offset) {
   int inc = 0;
 
-  inc += snprintf(buffer + inc, buffer_size - inc, HEX "  ", offset);
+  inc += snprintf(buffer + inc, buffer_size - inc, HEX_16 "  ", offset);
 
   inc += print_buffer(buffer + inc, buffer_size - inc, instruction);
 
