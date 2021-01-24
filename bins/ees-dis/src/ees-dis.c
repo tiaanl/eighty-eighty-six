@@ -3,7 +3,6 @@
 #include <decoder/decoder.h>
 #include <disassembler/disassembler.h>
 #include <getopt.h>
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 
