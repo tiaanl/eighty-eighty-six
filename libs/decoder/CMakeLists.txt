@@ -12,3 +12,8 @@ set(SOURCE_FILES
 add_library(decoder ${HEADER_FILES} ${SOURCE_FILES})
 target_include_directories(decoder PUBLIC include)
 target_link_libraries(decoder PUBLIC instructions)
+
+add_executable(decoder_tests tests/decoder_tests.c ${HEADER_FILES} ${SOURCE_FILES})
+target_compile_definitions(decoder_tests PRIVATE -DTESTING)
+target_include_directories(decoder_tests PRIVATE include)
+target_link_libraries(decoder_tests PRIVATE instructions testing)

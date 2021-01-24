@@ -1,16 +1,15 @@
-#include "decoder/decoder.h"
-#include "decoder/mod_reg_rm.h"
-#include "platform.h"
+#include "../include/decoder/decoder.h"
+#include "../src/mod_rm.h"
 
 #include <assert.h>
-
-#if 0
+#include <instructions/instructions.h>
 
 #define ASSERT_OPERAND_INDIRECT(Size)                                                              \
-  void assert_operand_indirect_##Size(struct operand *operand, enum indirect_encoding encoding) {  \
-    assert(operand->type == OT_INDIRECT);                                                          \
-    assert(operand->size == OS_##Size);                                                            \
-    assert(operand->as_indirect.encoding == encoding);                                             \
+  void assert_operand_indirect_##Size(struct operand *operand,                                     \
+                                      enum indirect_memory_encoding encoding) {                    \
+    assert(operand->type == ot_indirect);                                                          \
+    assert(operand->size == os_##Size);                                                            \
+    assert(operand->data.as_indirect.encoding == encoding);                                        \
   }
 
 ASSERT_OPERAND_INDIRECT(8)
@@ -20,9 +19,9 @@ ASSERT_OPERAND_INDIRECT(16)
 
 #define ASSERT_OPERAND_DIRECT(Size)                                                                \
   void assert_operand_direct_##Size(struct operand *operand, u16 address) {                        \
-    assert(operand->type == OT_DIRECT);                                                            \
-    assert(operand->size == OS_##Size);                                                            \
-    assert(operand->as_direct.address == address);                                                 \
+    assert(operand->type == ot_direct);                                                            \
+    assert(operand->size == os_##Size);                                                            \
+    assert(operand->data.as_direct.address == address);                                            \
   }
 
 ASSERT_OPERAND_DIRECT(8)
@@ -32,9 +31,9 @@ ASSERT_OPERAND_DIRECT(16)
 
 #define ASSERT_OPERAND_REG(Size)                                                                   \
   void assert_operand_reg_##Size(struct operand *operand, enum register_##Size reg) {              \
-    assert(operand->type == OT_REGISTER);                                                          \
-    assert(operand->size == OS_##Size);                                                            \
-    assert(operand->as_register.reg_##Size == reg);                                                \
+    assert(operand->type == ot_register);                                                          \
+    assert(operand->size == os_##Size);                                                            \
+    assert(operand->data.as_register.reg_##Size == reg);                                           \
   }
 
 ASSERT_OPERAND_REG(8)
@@ -44,9 +43,9 @@ ASSERT_OPERAND_REG(16)
 
 #define ASSERT_OPERAND_IMMEDIATE(Size)                                                             \
   void assert_operand_immediate_##Size(struct operand *operand, u##Size immediate) {               \
-    assert(operand->type == OT_IMMEDIATE);                                                         \
-    assert(operand->size == OS_##Size);                                                            \
-    assert(operand->as_immediate.immediate_##Size == immediate);                                   \
+    assert(operand->type == ot_immediate);                                                         \
+    assert(operand->size == os_##Size);                                                            \
+    assert(operand->data.as_immediate.immediate_##Size == immediate);                              \
   }
 
 ASSERT_OPERAND_IMMEDIATE(8)
@@ -60,9 +59,9 @@ void assert_operand_none(struct operand *operand) {
 
 #define ASSERT_OPERAND_DISPLACEMENT(SIZE)                                                          \
   void assert_operand_displacement_##SIZE(struct operand *operand, i16 displacement) {             \
-    assert(operand->type == OT_DISPLACEMENT);                                                      \
-    assert(operand->size == OS_##SIZE);                                                            \
-    assert(operand->as_displacement.displacement == displacement);                                 \
+    assert(operand->type == ot_displacement);                                                      \
+    assert(operand->size == os_##SIZE);                                                            \
+    assert(operand->data.as_displacement.displacement == displacement);                            \
   }
 
 ASSERT_OPERAND_DISPLACEMENT(8)
@@ -72,9 +71,9 @@ ASSERT_OPERAND_DISPLACEMENT(16)
 
 #define ASSERT_JUMP_OFFSET(Size)                                                                   \
   void assert_operand_jump_offset_##Size(struct operand *operand, i##Size offset) {                \
-    assert(operand->type == OT_JUMP);                                                              \
-    assert(operand->size == OS_##Size);                                                            \
-    assert(operand->as_jump.offset == offset);                                                     \
+    assert(operand->type == ot_jump);                                                              \
+    assert(operand->size == os_##Size);                                                            \
+    assert(operand->data.as_jump.offset == offset);                                                \
   }
 
 ASSERT_JUMP_OFFSET(8)
@@ -82,157 +81,172 @@ ASSERT_JUMP_OFFSET(16)
 
 #undef ASSERT_JUMP_OFFSET
 
-void test_00(void) {
-  // add [di], bl
-  //  const u8 buffer[] = {0x00, 0x1d};
-  const u8 buffer[] = {0x00, encode_mrrm(mrrm_mod_indirect, mrrm_reg_bl_bx, mrrm_rm_bp_di)};
+u8 buffer_reader(void *context, u32 position) {
+  return ((u8 *)context)[position];
+}
 
-  struct instruction i = {0};
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == ADD);
-  assert_operand_indirect_8(&i.destination, ie_bp_di);
+void init_reader(struct reader *reader, const u8 *buffer) {
+  reader->context = (void *)buffer;
+  reader->reader_func = buffer_reader;
+}
+
+#define READER(...)                                                                                \
+  const u8 buffer[] = {__VA_ARGS__};                                                               \
+  struct reader reader;                                                                            \
+  do {                                                                                             \
+    init_reader(&reader, buffer);                                                                  \
+  } while (0)
+
+void test_00(void) {
+  // add ds:[di], bl
+  READER(0x00, 0x1d);
+
+  struct instruction i;
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_add);
+  assert_operand_indirect_8(&i.destination, ime_di);
   assert_operand_reg_8(&i.source, BL);
 }
 
 void test_01(void) {
   // add [di], bx
-  const u8 buffer[] = {0x01, 0x1d};
+  READER(0x01, 0x1d);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == ADD);
-  assert_operand_indirect_16(&i.destination, ie_di);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_add);
+  assert_operand_indirect_16(&i.destination, ime_di);
   assert_operand_reg_16(&i.source, BX);
 }
 
 void test_02(void) {
   // add bl, [di]
-  const u8 buffer[] = {0x02, 0x1d};
+  READER(0x02, 0x1d);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_add);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, ie_di);
+  assert_operand_indirect_8(&i.source, ime_di);
 }
 
 void test_03(void) {
   // add bx, [di]
-  const u8 buffer[] = {0x03, 0x1d};
+  READER(0x03, 0x1d);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_add);
   assert_operand_reg_16(&i.destination, BX);
-  assert_operand_indirect_16(&i.source, ie_di);
+  assert_operand_indirect_16(&i.source, ime_di);
 }
 
 void test_04(void) {
   // add al, 8
-  const u8 buffer[] = {0x04, 0x08};
+  READER(0x04, 0x08);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_add);
   assert_operand_reg_8(&i.destination, AL);
   assert_operand_immediate_8(&i.source, 0x08);
 }
 
 void test_05(void) {
   // add ax, 0xffee
-  const u8 buffer[] = {0x05, 0xee, 0xff};
+  READER(0x05, 0xee, 0xff);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_add);
   assert_operand_reg_16(&i.destination, AX);
   assert_operand_immediate_16(&i.source, 0xffee);
 }
 
 void test_40(void) {
   // inc ax
-  const u8 buffer[] = {0x40};
+  READER(0x40);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, AX);
   assert_operand_none(&i.source);
 }
 
 void test_41(void) {
   // inc cx
-  const u8 buffer[] = {0x41};
+  READER(0x41);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, CX);
   assert_operand_none(&i.source);
 }
 
 void test_42(void) {
   // inc dx
-  const u8 buffer[] = {0x42};
+  READER(0x42);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, DX);
   assert_operand_none(&i.source);
 }
 
 void test_43(void) {
   // inc bx
-  const u8 buffer[] = {0x43};
+  READER(0x43);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, BX);
   assert_operand_none(&i.source);
 }
 
 void test_44(void) {
   // inc sp
-  const u8 buffer[] = {0x44};
+  READER(0x44);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, SP);
   assert_operand_none(&i.source);
 }
 
 void test_45(void) {
   // inc bp
-  const u8 buffer[] = {0x45};
+  READER(0x45);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, BP);
   assert_operand_none(&i.source);
 }
 
 void test_46(void) {
   // inc si
-  const u8 buffer[] = {0x46};
+  READER(0x46);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, SI);
   assert_operand_none(&i.source);
 }
 
 void test_47(void) {
   // inc di
-  const u8 buffer[] = {0x47};
+  READER(0x47);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == INC);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_inc);
   assert_operand_reg_16(&i.destination, DI);
   assert_operand_none(&i.source);
 }
@@ -240,11 +254,11 @@ void test_47(void) {
 void test_74(void) {
   // t:
   //   je, t
-  const u8 buffer[] = {0x74, 0xfe};
+  READER(0x74, 0xfe);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == JZ);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_jz);
   assert_operand_jump_offset_8(&i.destination, -2);
   assert_operand_none(&i.source);
 }
@@ -252,11 +266,11 @@ void test_74(void) {
 void test_80(void) {
 #if 0
   // add bl, 3
-  const u8 buffer[] = {0x80, 0xc3, 0x03};
+  READER(0x80, 0xc3, 0x03);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_add);
   assert_operand_reg_8(&i.destination, BL);
   assert_operand_immediate(&i.source, OPERAND_SIZE_8, 0x03);
 #endif // 0
@@ -265,11 +279,11 @@ void test_80(void) {
 void test_81(void) {
 #if 0
   // add bx, 0x1007
-  const u8 buffer[] = {0x81, 0xc3, 0x07, 0x10};
+  READER(0x81, 0xc3, 0x07, 0x10);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 4);
-  assert(i.type == ADD);
+  assert(decode_instruction(&reader, 0, &i) == 4);
+  assert(i.type == it_add);
   assert_operand_reg_16(&i.destination, BX);
   assert_operand_immediate(&i.source, OPERAND_SIZE_16, 0x1007);
 #endif // 0
@@ -277,273 +291,272 @@ void test_81(void) {
 
 void test_88(void) {
   // mov [di], al
-  const u8 buffer[] = {0x88, 0x05};
+  READER(0x88, 0x05);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
-  assert_operand_indirect_8(&i.destination, ie_di);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
+  assert_operand_indirect_8(&i.destination, ime_di);
   assert_operand_reg_8(&i.source, AL);
 }
 
 void test_89(void) {
   // mov [di], ax
-  const u8 buffer[] = {0x89, 0x05};
+  READER(0x89, 0x05);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
-  assert_operand_indirect_16(&i.destination, ie_di);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
+  assert_operand_indirect_16(&i.destination, ime_di);
   assert_operand_reg_16(&i.source, AX);
 }
 
 void test_8a(void) {
   // mov bl, [di]
-  const u8 buffer[] = {0x8a, 0x1d};
+  READER(0x8a, 0x1d);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, BL);
-  assert_operand_indirect_8(&i.source, ie_di);
+  assert_operand_indirect_8(&i.source, ime_di);
 }
 
 void test_8b(void) {
   // mov cx, [di]
-  const u8 buffer[] = {0x8b, 0x0d};
+  READER(0x8b, 0x0d);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, CX);
-  assert_operand_indirect_16(&i.source, ie_di);
+  assert_operand_indirect_16(&i.source, ime_di);
 }
 
 void test_b0(void) {
   // mov al, 0xb0
-  const u8 buffer[] = {0xb0, 0xb0};
+  READER(0xb0, 0xb0);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, AL);
   assert_operand_immediate_8(&i.source, 0xb0);
 }
 
 void test_b1(void) {
   // mov cl, 0xb1
-  const u8 buffer[] = {0xb1, 0xb1};
+  READER(0xb1, 0xb1);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, CL);
   assert_operand_immediate_8(&i.source, 0xb1);
 }
 
 void test_b2(void) {
   // mov dl, 0xb2
-  const u8 buffer[] = {0xb2, 0xb2};
+  READER(0xb2, 0xb2);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, DL);
   assert_operand_immediate_8(&i.source, 0xb2);
 }
 
 void test_b3(void) {
   // mov bl, 0xb3
-  const u8 buffer[] = {0xb3, 0xb3};
+  READER(0xb3, 0xb3);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, BL);
   assert_operand_immediate_8(&i.source, 0xb3);
 }
 
 void test_b4(void) {
   // mov ah, 0xb4
-  const u8 buffer[] = {0xb4, 0xb4};
+  READER(0xb4, 0xb4);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, AH);
   assert_operand_immediate_8(&i.source, 0xb4);
 }
 
 void test_b5(void) {
   // mov ch, 0xb5
-  const u8 buffer[] = {0xb5, 0xb5};
+  READER(0xb5, 0xb5);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, CH);
   assert_operand_immediate_8(&i.source, 0xb5);
 }
 
 void test_b6(void) {
   // mov dh, 0xb6
-  const u8 buffer[] = {0xb6, 0xb6};
+  READER(0xb6, 0xb6);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, DH);
   assert_operand_immediate_8(&i.source, 0xb6);
 }
 
 void test_b7(void) {
   // mov bh, 0xb7
-  const u8 buffer[] = {0xb7, 0xb7};
+  READER(0xb7, 0xb7);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_mov);
   assert_operand_reg_8(&i.destination, BH);
   assert_operand_immediate_8(&i.source, 0xb7);
 }
 
 void test_b8(void) {
   // mov ax, 0xb8b8
-  const u8 buffer[] = {0xb8, 0xb8, 0xb8};
+  READER(0xb8, 0xb8, 0xb8);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, AX);
   assert_operand_immediate_16(&i.source, 0xb8b8);
 }
 
 void test_b9(void) {
   // mov cx, 0xb9b9
-  const u8 buffer[] = {0xb9, 0xb9, 0xb9};
+  READER(0xb9, 0xb9, 0xb9);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, CX);
   assert_operand_immediate_16(&i.source, 0xb9b9);
 }
 
 void test_ba(void) {
   // mov dx, 0xbaba
-  const u8 buffer[] = {0xba, 0xba, 0xba};
+  READER(0xba, 0xba, 0xba);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, DX);
   assert_operand_immediate_16(&i.source, 0xbaba);
 }
 
 void test_bb(void) {
   // mov bx, 0xbbbb
-  const u8 buffer[] = {0xbb, 0xbb, 0xbb};
+  READER(0xbb, 0xbb, 0xbb);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, BX);
   assert_operand_immediate_16(&i.source, 0xbbbb);
 }
 
 void test_bc(void) {
   // mov sp, 0xbcbc
-  const u8 buffer[] = {0xbc, 0xbc, 0xbc};
+  READER(0xbc, 0xbc, 0xbc);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, SP);
   assert_operand_immediate_16(&i.source, 0xbcbc);
 }
 
 void test_bd(void) {
   // mov bp, 0xbdbd
-  const u8 buffer[] = {0xbd, 0xbd, 0xbd};
+  READER(0xbd, 0xbd, 0xbd);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, BP);
   assert_operand_immediate_16(&i.source, 0xbdbd);
 }
 
 void test_be(void) {
   // mov si, 0xbebe
-  const u8 buffer[] = {0xbe, 0xbe, 0xbe};
+  READER(0xbe, 0xbe, 0xbe);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, SI);
   assert_operand_immediate_16(&i.source, 0xbebe);
 }
 
 void test_bf(void) {
   // mov di, 0xbfbf
-  const u8 buffer[] = {0xbf, 0xbf, 0xbf};
+  READER(0xbf, 0xbf, 0xbf);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == MOV);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_mov);
   assert_operand_reg_16(&i.destination, DI);
   assert_operand_immediate_16(&i.source, 0xbfbf);
 }
 
 void test_e2(void) {
   // loop -2
-  const u8 buffer[] = {0xe2, 0xfc};
+  READER(0xe2, 0xfc);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 2);
-  assert(i.type == LOOP);
+  assert(decode_instruction(&reader, 0, &i) == 2);
+  assert(i.type == it_loop);
   assert_operand_jump_offset_8(&i.destination, -4);
   assert_operand_none(&i.source);
 }
 
 void test_f6(void) {
   // test bl, 0x07
-  const u8 buffer[] = {0xf6, 0xc3, 0x07};
+  READER(0xf6, 0xc3, 0x07);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 3);
-  assert(i.type == TEST);
+  assert(decode_instruction(&reader, 0, &i) == 3);
+  assert(i.type == it_test);
   assert_operand_reg_8(&i.destination, BL);
   assert_operand_immediate_8(&i.source, 0x07);
 }
 
 void test_f4(void) {
   // hlt
-  const u8 buffer[] = {0xf4};
+  READER(0xf4);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 1);
-  assert(i.type == HLT);
+  assert(decode_instruction(&reader, 0, &i) == 1);
+  assert(i.type == it_hlt);
   assert_operand_none(&i.destination);
   assert_operand_none(&i.source);
 }
 
 void test_f7(void) {
   // test bx, 0x0707
-  const u8 buffer[] = {0xf7, 0xc3, 0x07, 0x07};
+  READER(0xf7, 0xc3, 0x07, 0x07);
 
   struct instruction i;
-  assert(decode_instruction(buffer, sizeof(buffer), &i) == 4);
-  assert(i.type == TEST);
+  assert(decode_instruction(&reader, 0, &i) == 4);
+  assert(i.type == it_test);
   assert_operand_reg_16(&i.destination, BX);
   assert_operand_immediate_16(&i.source, 0x0707);
 }
 
 #define NOP_TEST(OpCode)                                                                           \
   void test_##OpCode(void) {                                                                       \
-    const u8 buffer[] = {0x##OpCode};                                                              \
+    READER(0x##OpCode);                                                                            \
     struct instruction i;                                                                          \
-    /*assert(decode_instruction(buffer, sizeof(buffer), &i) == -1);*/                              \
   }
 
 // NOP_TEST(00)
@@ -1093,4 +1106,8 @@ void decoder_tests(void) {
   test_fe();
   test_ff();
 }
-#endif  // 0
+
+int main(int argc, char **argv) {
+  decoder_tests();
+  return 0;
+}

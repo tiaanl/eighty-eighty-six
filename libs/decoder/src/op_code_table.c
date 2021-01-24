@@ -416,7 +416,7 @@ struct op_code_mapping op_code_table[] = {
     /* f3 */ {oct_prefix,      _,           ids_none, _    ,               _    , _    , decode_rep_prefix}, // rep prefix
     /* f4 */ {oct_instruction, it_hlt,      ids_none, _    ,               _    , _    , decode_Xx_Xx_Xx},
     /* f5 */ {oct_instruction, it_cmc,      ids_none, _    ,               _    , _    , decode_Xx_Xx_Xx},
-    /* f6 */ {oct_group,       _,           ids_none, am_Eb,               am_Ib, _    , _, op_code_table_group_f6},
+    /* f6 */ {oct_group,       _,           ids_none, _    ,               _    , _    , _, op_code_table_group_f6},
     /* f7 */ {oct_group,       _,           ids_none, _    ,               _    , _    , _, op_code_table_group_f7},
     /* f8 */ {oct_instruction, it_clc,      ids_none, _    ,               _    , _    , decode_Xx_Xx_Xx},
     /* f9 */ {oct_instruction, it_stc,      ids_none, _    ,               _    , _    , decode_Xx_Xx_Xx},

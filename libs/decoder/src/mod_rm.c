@@ -1,5 +1,6 @@
 #include "mod_rm.h"
-// #include "testing.h"
+
+#include <testing/testing.h>
 
 #if defined(TESTING)
 void test_decoders(void) {
@@ -25,9 +26,10 @@ void test_encode_mod_rm(void) {
   struct mod_rm mrm = {
       .mod = mod_rm_mod_indirect,
       .reg = mod_rm_reg_ch_bp,
-      .reg_mem = {
-          .as_mem = mod_rm_mem_bp_di,
-      },
+      .reg_mem =
+          {
+              .as_mem = mod_rm_mem_bp_di,
+          },
   };
 
   u8 result = encode_mod_rm(mrm);
@@ -40,4 +42,4 @@ void mod_rm_tests(void) {
   test_encode_mod_rm_values();
   test_encode_mod_rm();
 }
-#endif  // defined(TESTING)
+#endif // defined(TESTING)

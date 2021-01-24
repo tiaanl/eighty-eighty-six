@@ -1,3 +1,5 @@
+test bl, 0x07
+
 ; sum of odd numbers in the array.
 
     ;mov al, [10]
@@ -8,23 +10,23 @@
 
     ;shr byte [bp], cl
 
-    inc ax
-    inc cx
-    inc dx
-    inc bx
-    inc sp
-    inc bp
-    inc si
-    inc di
+    ;inc ax
+    ;inc cx
+    ;inc dx
+    ;inc bx
+    ;inc sp
+    ;inc bp
+    ;inc si
+    ;inc di
 
-    dec ax
-    dec cx
-    dec dx
-    dec bx
-    dec sp
-    dec bp
-    dec si
-    dec di
+    ;dec ax
+    ;dec cx
+    ;dec dx
+    ;dec bx
+    ;dec sp
+    ;dec bp
+    ;dec si
+    ;dec di
 
     ;mov cs, ax
     ;jmp 0xACDC:0x5578

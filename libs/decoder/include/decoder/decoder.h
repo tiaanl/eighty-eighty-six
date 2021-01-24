@@ -4,6 +4,6 @@
 #include <base/reader.h>
 #include <instructions/instructions.h>
 
-void decode_instruction(struct reader *reader, u32 position, struct instruction *instruction);
+int decode_instruction(struct reader *reader, u32 position, struct instruction *instruction);
 
 #endif // DECODER_H_

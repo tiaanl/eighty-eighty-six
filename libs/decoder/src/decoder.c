@@ -5,8 +5,7 @@
 
 #include <assert.h>
 
-void decode_instruction(struct reader *reader, u32 position,
-                        struct instruction *instruction) {
+int decode_instruction(struct reader *reader, u32 position, struct instruction *instruction) {
   struct decoder_context decoder_context;
   memset(&decoder_context, 0, sizeof(decoder_context));
   decoder_context.reader = reader;
@@ -30,7 +29,13 @@ void decode_instruction(struct reader *reader, u32 position,
 
   // If the mapping is a group, then we replace the mapping with one in the group table.
   if (mapping->op_code_type == oct_group) {
-    u8 index = op_code >> 3 & 0x07;
+    assert(!mapping->tmp1);
+    assert(!mapping->tmp2);
+    assert(!mapping->tmp3);
+    assert(mapping->group_table);
+    u8 mod_rm_byte = reader_fetch_u8(reader, position + 1);
+    u8 index = mod_rm_byte >> 3 & 0x07;
+    // u8 index = op_code >> 3 & 0x07;
     mapping = &mapping->group_table[index];
   }
 
@@ -47,4 +52,6 @@ void decode_instruction(struct reader *reader, u32 position,
     instruction->buffer[i] = reader_fetch_u8(reader, position + i);
   }
   instruction->instruction_size = instruction_size;
+
+  return instruction_size;
 }
