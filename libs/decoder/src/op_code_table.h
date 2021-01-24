@@ -3,7 +3,7 @@
 
 #include "decoder_context.h"
 
-#include <base/streams.h>
+#include <base/reader.h>
 #include <instructions/instructions.h>
 
 enum op_code_type {

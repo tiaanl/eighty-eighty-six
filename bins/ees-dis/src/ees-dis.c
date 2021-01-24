@@ -1,5 +1,5 @@
 #include <base/platform.h>
-#include <base/streams.h>
+#include <base/reader.h>
 #include <decoder/decoder.h>
 #include <disassembler/disassembler.h>
 #include <getopt.h>
@@ -105,8 +105,8 @@ int main(int argc, char *argv[]) {
 
   struct binary_data data = read_file(options.filename);
 
-  struct input_stream in_stream;
-  input_stream_init(&in_stream, &data, binary_data_fetch);
+  struct reader reader;
+  reader_init(&reader, &data, binary_data_fetch);
 
   /* DOS MZ executable format. */
   if (*(u16 *)data.data == 0x5a4d) {
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
   while (options.offset < data.data_size) {
     struct instruction instruction;
     instruction_init(&instruction);
-    decode_instruction(&in_stream, options.offset, &instruction);
+    decode_instruction(&reader, options.offset, &instruction);
     disassemble(buffer, buffer_size, &instruction, options.offset);
     options.offset += instruction.instruction_size;
     printf("%s\n", buffer);

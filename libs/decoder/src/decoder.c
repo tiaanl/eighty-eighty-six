@@ -5,13 +5,13 @@
 
 #include <assert.h>
 
-void decode_instruction(struct input_stream *stream, u32 position,
+void decode_instruction(struct reader *reader, u32 position,
                         struct instruction *instruction) {
-  struct decoder_context decoder_context = {
-      .stream = stream,
-      .position = position,
-      .segment_register_override = DS,
-  };
+  struct decoder_context decoder_context;
+  memset(&decoder_context, 0, sizeof(decoder_context));
+  decoder_context.reader = reader;
+  decoder_context.position = position;
+  decoder_context.segment_register_override = DS;
 
   // Instruction defaults.
   memset(instruction, 0, sizeof(*instruction));
@@ -44,7 +44,7 @@ void decode_instruction(struct input_stream *stream, u32 position,
 
   u8 instruction_size = decoder_context.position - position;
   for (int i = 0; i < instruction_size; ++i) {
-    instruction->buffer[i] = input_stream_fetch_u8(stream, position + i);
+    instruction->buffer[i] = reader_fetch_u8(reader, position + i);
   }
   instruction->instruction_size = instruction_size;
 }

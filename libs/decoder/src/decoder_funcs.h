@@ -3,7 +3,7 @@
 
 #include "decoder_context.h"
 
-#include <base/streams.h>
+#include <base/reader.h>
 #include <instructions/instructions.h>
 
 void decode_AL_DX_Xx(struct decoder_context *decoder_context, struct instruction *instruction);

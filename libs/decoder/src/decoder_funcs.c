@@ -217,7 +217,7 @@ static inline void operand_from_es_di(struct operand *operand, enum operand_size
 }
 
 static inline u8 fetch_op_code(struct decoder_context *decoder_context) {
-  return decoder_context->stream->fetch_func(decoder_context->stream->context,
+  return decoder_context->reader->reader_func(decoder_context->reader->context,
                                              decoder_context->position - 1);
 }
 

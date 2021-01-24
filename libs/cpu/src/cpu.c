@@ -37,7 +37,7 @@ void print_registers(struct cpu *cpu) {
          cpu->regs.word[SI], cpu->regs.word[DI], cpu->regs.word[BP], cpu->regs.word[SP], 0);
 }
 
-u8 input_stream_fetch_from_bus(void *context, u32 position) {
+u8 reader_fetch_from_bus(void *context, u32 position) {
   struct bus *bus = context;
   return bus_fetch_byte(bus, position);
 }
@@ -46,11 +46,11 @@ void cpu_step(struct cpu *cpu) {
   struct address cs_ip = segment_offset(cpu->segs[CS], cpu->ip);
   u32 flat = flatten_address(cs_ip);
 
-  struct input_stream stream;
-  input_stream_init(&stream, cpu->bus, input_stream_fetch_from_bus);
+  struct reader reader;
+  reader_init(&reader, cpu->bus, reader_fetch_from_bus);
 
   struct instruction instruction;
-  decode_instruction(&stream, flat, &instruction);
+  decode_instruction(&reader, flat, &instruction);
 
   print_registers(cpu);
 
