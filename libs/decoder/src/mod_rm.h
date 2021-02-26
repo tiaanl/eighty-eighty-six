@@ -42,16 +42,10 @@ union mod_rm_reg_mem {
   enum mod_rm_mem as_mem;
 };
 
-union mod_rm_displacement {
-  i16 as_offset;
-  u16 as_address;
-};
-
 struct mod_rm {
   enum mod_rm_mod mod;
   enum mod_rm_reg reg;
   union mod_rm_reg_mem reg_mem;
-  union mod_rm_displacement displacement;
 };
 
 static inline struct mod_rm decode_mod_rm(u8 byte) {

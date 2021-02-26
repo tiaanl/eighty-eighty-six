@@ -1,7 +1,5 @@
-#include "../include/decoder/decoder.h"
-#include "../src/mod_rm.h"
-
 #include <assert.h>
+#include <decoder/decoder.h>
 #include <instructions/instructions.h>
 
 #define ASSERT_OPERAND_INDIRECT(Size)                                                              \
@@ -1107,7 +1105,10 @@ void decoder_tests(void) {
   test_ff();
 }
 
+void mod_rm_tests(void);
+
 int main(int argc, char **argv) {
   decoder_tests();
+  mod_rm_tests();
   return 0;
 }
