@@ -14,6 +14,9 @@ struct decoder_context {
   enum segment_register segment_register_override;
 };
 
+void decoder_context_init(struct decoder_context *context, struct reader *reader, u32 position,
+                          enum segment_register segment_register_override);
+
 #define DECODER_FETCH(TYPE)                                                                        \
   static inline TYPE decoder_fetch_##TYPE(struct decoder_context *decoder_context) {               \
     TYPE result = reader_fetch_##TYPE(decoder_context->reader, decoder_context->position);         \

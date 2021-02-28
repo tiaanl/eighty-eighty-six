@@ -191,7 +191,7 @@ int print_operand(char *buffer, size_t buffer_size, const struct operand *operan
 
     default:
       assert(0);
-      break;
+      return 0;
   }
 }
 

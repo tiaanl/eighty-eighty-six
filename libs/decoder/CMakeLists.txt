@@ -4,6 +4,7 @@ set(HEADER_FILES
 
 set(SOURCE_FILES
     src/decoder.c
+    src/decoder_context.c
     src/decoder_funcs.c
     src/op_code_table.c
     )
